@@ -13,6 +13,7 @@ export default function Checkout({ config, metodos, onClose }) {
   const [ubicacion, setUbicacion]   = useState(null);
   const [errorUbic, setErrorUbic]   = useState('');
   const [loadingUbic, setLoadingUbic] = useState(false);
+  const [mostrarMapa, setMostrarMapa] = useState(false);
   const [direccion, setDireccion]   = useState('');
   const [pisoDepto, setPisoDepto]   = useState('');
   const [indicaciones, setIndicaciones] = useState('');
@@ -428,11 +429,19 @@ export default function Checkout({ config, metodos, onClose }) {
         .ch-delivery-bloque { display: flex; flex-direction: column; gap: 12px; }
         .ch-btn-ubic { background: #1a1510; color: #faf7f2; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; }
         .ch-btn-ubic:disabled { opacity: 0.6; cursor: default; }
-        .ch-ubic-ok { font-size: 13px; color: #2d7a3a; font-weight: 500; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .ch-ubic-precision { font-size: 12px; color: #9a8f82; font-weight: 400; }
+        .ch-ubic-intro { font-size: 13px; color: #9a8f82; margin: 0; line-height: 1.5; }
+        .ch-ubic-opciones { display: flex; flex-direction: column; gap: 10px; }
+        .ch-ubic-o { text-align: center; font-size: 12px; color: #ccc5bb; }
+        .ch-ubic-ok-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .ch-ubic-ok { font-size: 13px; color: #2a7a4a; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .ch-btn-cambiar-ubic { background: transparent; border: none; color: #9a8f82; font-size: 12px; cursor: pointer; font-family: inherit; text-decoration: underline; }
         .ch-ubic-loading { display: flex; align-items: center; gap: 8px; }
         .ch-ubic-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .ch-btn-mapa { display: flex; align-items: center; justify-content: center; gap: 8px; background: #f7f5f2; border: 1.5px solid #e4ddd3; color: #1a1510; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: border-color 0.15s; }
+        .ch-btn-mapa:hover { border-color: #c1320a; }
+        .ch-mapa-wrap { display: flex; flex-direction: column; gap: 10px; }
+        .ch-mapa-intro { font-size: 13px; color: #9a8f82; margin: 0; line-height: 1.5; }
         .ch-error-ubic { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
         .ch-error-titulo { font-size: 13px; font-weight: 600; color: #c1320a; margin: 0; line-height: 1.4; }
         .ch-error-pasos { font-size: 13px; color: #6b6259; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
