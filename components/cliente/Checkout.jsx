@@ -1,25 +1,35 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useCarrito } from '../../contexts/CarritoContext';
 import { obtenerUbicacion, distanciaKm, generarMensajeWhatsApp, abrirWhatsApp } from '../../lib/clienteUtils';
+
+const MapSelector = dynamic(() => import('./MapSelector'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ height: 280, background: '#f0ebe3', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9a8f82', fontSize: 14 }}>
+      Cargando mapa…
+    </div>
+  ),
+});
 
 const PASOS = ['carrito', 'entrega', 'datos', 'pago'];
 
 export default function Checkout({ config, metodos, onClose }) {
   const { items, subtotal, quitar, agregar, vaciar } = useCarrito();
-  const [paso, setPaso]             = useState('carrito');
+  const [paso, setPaso]               = useState('carrito');
   const [tipoEntrega, setTipoEntrega] = useState(null);
-  const [ubicacion, setUbicacion]   = useState(null);
-  const [errorUbic, setErrorUbic]   = useState('');
+  const [ubicacion, setUbicacion]     = useState(null);
+  const [errorUbic, setErrorUbic]     = useState(null);
   const [loadingUbic, setLoadingUbic] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
-  const [direccion, setDireccion]   = useState('');
-  const [pisoDepto, setPisoDepto]   = useState('');
+  const [direccion, setDireccion]     = useState('');
+  const [pisoDepto, setPisoDepto]     = useState('');
   const [indicaciones, setIndicaciones] = useState('');
-  const [cliente, setCliente]       = useState({ nombre: '', telefono: '', aclaraciones: '' });
-  const [metodoPago, setMetodoPago] = useState('');
-  const [errores, setErrores]       = useState({});
+  const [cliente, setCliente]         = useState({ nombre: '', telefono: '', aclaraciones: '' });
+  const [metodoPago, setMetodoPago]   = useState('');
+  const [errores, setErrores]         = useState({});
 
   const costoDelivery = tipoEntrega === 'delivery' ? (config?.delivery_precio || 0) : 0;
   const total         = subtotal + Number(costoDelivery);
@@ -30,7 +40,6 @@ export default function Checkout({ config, metodos, onClose }) {
     setErrorUbic(null);
     setUbicacion(null);
 
-    // Detectar si es Android o iOS para dar instrucciones específicas
     const esIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const esAndroid = /android/i.test(navigator.userAgent);
 
@@ -40,47 +49,57 @@ export default function Checkout({ config, metodos, onClose }) {
 
       if (dist > config.delivery_radio_km) {
         setErrorUbic({
-          titulo: `Tu ubicación está a ${dist.toFixed(1)} km. Solo hacemos delivery hasta ${config.delivery_radio_km} km del local.`,
+          titulo: `Tu ubicación está a ${dist.toFixed(1)} km. Solo llegamos hasta ${config.delivery_radio_km} km del local.`,
           puedeReintentar: false,
         });
-        setUbicacion(null);
       } else {
         setUbicacion({ lat, lng, dist: dist.toFixed(1), precision });
       }
     } catch (e) {
       const msg = e.message || '';
-
-      if (msg.includes('denegado') || msg.includes('PERMISSION_DENIED')) {
-        // El usuario negó el permiso
+      if (msg.includes('denegado') || msg.includes('PERMISSION_DENIED') || msg.includes('Permiso')) {
         setErrorUbic({
-          titulo: 'Bloqueaste el permiso de ubicación para esta página.',
+          titulo: 'Bloqueaste el permiso de ubicación.',
           pasos: esIOS
-            ? ['Abrí Configuración', 'Entrá a Safari (o tu navegador)', 'Ubicación → Permitir']
+            ? ['Abrí Configuración del celular', 'Entrá a Safari → Ubicación', 'Cambialo a "Permitir"']
             : esAndroid
-            ? ['Tocá el candado o ícono de info en la barra del navegador', 'Buscá "Ubicación" y cambialo a "Permitir"', 'Recargá la página e intentá de nuevo']
-            : ['Hacé click en el ícono de candado en la barra de dirección', 'Cambiá el permiso de Ubicación a "Permitir"', 'Recargá la página e intentá de nuevo'],
+            ? ['Tocá el ícono de candado en la barra del navegador', 'Buscá "Ubicación" y cambialo a "Permitir"', 'Volvé e intentá de nuevo']
+            : ['Hacé click en el candado de la barra de dirección', 'Cambiá el permiso de Ubicación a "Permitir"'],
           puedeReintentar: false,
         });
       } else if (msg.includes('GPS') || msg.includes('activado') || msg.includes('POSITION_UNAVAILABLE')) {
-        // GPS apagado
         setErrorUbic({
-          titulo: 'El GPS está desactivado en tu celular.',
+          titulo: 'El GPS está desactivado.',
           pasos: esIOS
-            ? ['Abrí Configuración', 'Tocá "Privacidad y seguridad"', 'Tocá "Localización"', 'Activá "Localización"']
+            ? ['Abrí Configuración', 'Tocá "Privacidad y seguridad" → "Localización"', 'Activá la localización']
             : esAndroid
-            ? ['Deslizá desde arriba para abrir el panel de notificaciones', 'Tocá el ícono de "Ubicación" para activarlo', 'Volvé a la app e intentá de nuevo']
-            : ['Activá la ubicación/GPS en la configuración de tu dispositivo'],
+            ? ['Deslizá desde arriba de la pantalla', 'Tocá el ícono de "Ubicación" para activarlo', 'Volvé e intentá de nuevo']
+            : ['Activá el GPS en la configuración de tu dispositivo'],
           puedeReintentar: true,
         });
       } else {
         setErrorUbic({
           titulo: 'No pudimos obtener tu ubicación.',
-          pasos: ['Asegurate de tener el GPS activado', 'Verificá que la app tenga permiso de ubicación', 'Intentá de nuevo'],
+          pasos: ['Verificá que el GPS esté activado', 'Asegurate de haber dado permiso de ubicación'],
           puedeReintentar: true,
         });
       }
     }
     setLoadingUbic(false);
+  }
+
+  function confirmarUbicacionMapa(lat, lng) {
+    const dist = distanciaKm(lat, lng, config.latitud_local, config.longitud_local);
+    if (dist > config.delivery_radio_km) {
+      setErrorUbic({
+        titulo: `Ese domicilio está a ${dist.toFixed(1)} km. Solo llegamos hasta ${config.delivery_radio_km} km del local.`,
+        puedeReintentar: false,
+      });
+    } else {
+      setUbicacion({ lat, lng, dist: dist.toFixed(1) });
+      setMostrarMapa(false);
+      setErrorUbic(null);
+    }
   }
 
   // ── VALIDACIONES ─────────────────────────────────────────────────────────────
@@ -100,45 +119,41 @@ export default function Checkout({ config, metodos, onClose }) {
   async function confirmarPedido() {
     if (!validarPago()) return;
 
-    // Guardar pedido en la base de datos
-    const { data: pedido, error } = await import('../../lib/supabaseClient')
-      .then(m => m.supabase.from('pedidos').insert({
-        cliente_nombre: cliente.nombre,
-        cliente_telefono: cliente.telefono || null,
-        tipo_entrega: tipoEntrega,
-        direccion: tipoEntrega === 'delivery' ? direccion : null,
-        piso_depto: tipoEntrega === 'delivery' ? pisoDepto : null,
-        indicaciones: indicaciones || null,
-        latitud: ubicacion?.lat || null,
-        longitud: ubicacion?.lng || null,
-        metodo_pago: metodoPago,
-        subtotal,
-        costo_delivery: costoDelivery,
-        total,
-        estado: 'nuevo',
-      }).select().single());
+    const { supabase } = await import('../../lib/supabaseClient');
+
+    const { data: pedido, error } = await supabase.from('pedidos').insert({
+      cliente_nombre:   cliente.nombre,
+      cliente_telefono: cliente.telefono || null,
+      tipo_entrega:     tipoEntrega,
+      direccion:        tipoEntrega === 'delivery' ? direccion : null,
+      piso_depto:       tipoEntrega === 'delivery' ? pisoDepto : null,
+      indicaciones:     indicaciones || null,
+      latitud:          ubicacion?.lat || null,
+      longitud:         ubicacion?.lng || null,
+      metodo_pago:      metodoPago,
+      subtotal,
+      costo_delivery:   costoDelivery,
+      total,
+      estado:           'nuevo',
+    }).select().single();
 
     if (!error && pedido) {
-      // Insertar items del pedido
-      await import('../../lib/supabaseClient').then(m =>
-        m.supabase.from('pedido_items').insert(
-          items.map(it => ({
-            pedido_id: pedido.id,
-            producto_id: it.tipo === 'producto' ? it.id : null,
-            promocion_id: it.tipo === 'promo' ? it.id : null,
-            variante_id: it.variante_id || null,
-            nombre_snapshot: it.nombre_snapshot,
-            precio_unitario: it.precio,
-            cantidad: it.cantidad,
-            detalle_seleccion: it.detalle_seleccion || null,
-          }))
-        )
+      await supabase.from('pedido_items').insert(
+        items.map(it => ({
+          pedido_id:        pedido.id,
+          producto_id:      it.tipo === 'producto' ? it.id : null,
+          promocion_id:     it.tipo === 'promo' ? it.id : null,
+          variante_id:      it.variante_id || null,
+          nombre_snapshot:  it.nombre_snapshot,
+          precio_unitario:  it.precio,
+          cantidad:         it.cantidad,
+          detalle_seleccion: it.detalle_seleccion || null,
+        }))
       );
     }
 
-    // Generar y abrir WhatsApp
     const mensaje = generarMensajeWhatsApp({
-      items: items.map(it => ({ ...it, precio: it.precio })),
+      items,
       subtotal,
       costoDelivery,
       total,
@@ -183,7 +198,7 @@ export default function Checkout({ config, metodos, onClose }) {
 
         {/* ── PASOS ── */}
         <div className="ch-steps">
-          {['Pedido','Entrega','Datos','Pago'].map((s, i) => (
+          {['Pedido', 'Entrega', 'Datos', 'Pago'].map((s, i) => (
             <div key={i} className={`ch-step ${i <= pasoIdx ? 'ch-step-done' : ''}`}>
               <div className="ch-step-dot">{i < pasoIdx ? '✓' : i + 1}</div>
               <span className="ch-step-label">{s}</span>
@@ -223,19 +238,24 @@ export default function Checkout({ config, metodos, onClose }) {
               <div className="ch-opciones-entrega">
                 <button
                   className={`ch-opcion-entrega ${tipoEntrega === 'retiro' ? 'activa' : ''}`}
-                  onClick={() => { setTipoEntrega('retiro'); setUbicacion(null); setErrorUbic(''); }}
+                  onClick={() => { setTipoEntrega('retiro'); setUbicacion(null); setErrorUbic(null); setMostrarMapa(false); }}
                 >
-                  <span className="ch-opcion-icon">🏠</span>
+                  <span className="ch-opcion-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  </span>
                   <div>
                     <span className="ch-opcion-titulo">Retiro por el local</span>
-                    <span className="ch-opcion-sub">Gratis · Lo retirás vos</span>
+                    <span className="ch-opcion-sub">Gratis · Retirás vos</span>
                   </div>
                 </button>
+
                 <button
                   className={`ch-opcion-entrega ${tipoEntrega === 'delivery' ? 'activa' : ''}`}
                   onClick={() => setTipoEntrega('delivery')}
                 >
-                  <span className="ch-opcion-icon">🛵</span>
+                  <span className="ch-opcion-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                  </span>
                   <div>
                     <span className="ch-opcion-titulo">Delivery a domicilio</span>
                     <span className="ch-opcion-sub">+${Number(config?.delivery_precio || 0).toLocaleString('es-AR')} · Hasta {config?.delivery_radio_km} km</span>
@@ -243,25 +263,60 @@ export default function Checkout({ config, metodos, onClose }) {
                 </button>
               </div>
 
+              {/* Sección de ubicación para delivery */}
               {tipoEntrega === 'delivery' && (
                 <div className="ch-delivery-bloque">
-                  <button className="ch-btn-ubic" onClick={pedirUbicacion} disabled={loadingUbic}>
-                    {loadingUbic
-                      ? <span className="ch-ubic-loading"><span className="ch-ubic-spinner" /> Esperando señal GPS…</span>
-                      : ubicacion
-                        ? 'Ubicación obtenida'
-                        : 'Usar mi ubicación actual'
-                    }
-                  </button>
-                  {ubicacion && (
-                    <p className="ch-ubic-ok">
-                      Ubicación obtenida · {ubicacion.dist} km del local
-                      {ubicacion.precision && (
-                        <span className="ch-ubic-precision"> · precisión ±{ubicacion.precision}m</span>
-                      )}
-                    </p>
+
+                  {/* Ubicación confirmada */}
+                  {ubicacion && !mostrarMapa && (
+                    <div className="ch-ubic-ok-wrap">
+                      <div className="ch-ubic-ok">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Ubicación confirmada · {ubicacion.dist} km del local
+                      </div>
+                      <button className="ch-btn-cambiar" onClick={() => { setUbicacion(null); setMostrarMapa(false); }}>
+                        Cambiar
+                      </button>
+                    </div>
                   )}
-                  {errorUbic && (
+
+                  {/* Opciones para obtener ubicación */}
+                  {!ubicacion && !mostrarMapa && (
+                    <div className="ch-ubic-opciones">
+                      <p className="ch-ubic-intro">Necesitamos tu ubicación para calcular si llegamos a tu zona y el costo del envío.</p>
+
+                      <button className="ch-btn-ubic" onClick={pedirUbicacion} disabled={loadingUbic}>
+                        {loadingUbic
+                          ? <span className="ch-ubic-loading"><span className="ch-ubic-spinner" /> Obteniendo ubicación…</span>
+                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg> Usar mi ubicación automática</>
+                        }
+                      </button>
+
+                      <div className="ch-o">o</div>
+
+                      <button className="ch-btn-mapa" onClick={() => setMostrarMapa(true)}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Ubicar en el mapa manualmente
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Mapa interactivo */}
+                  {mostrarMapa && !ubicacion && (
+                    <div className="ch-mapa-wrap">
+                      <p className="ch-mapa-intro">Mové el pin hasta tu domicilio y tocá <strong>Confirmar ubicación</strong>.</p>
+                      <MapSelector
+                        latLocal={config?.latitud_local || -32.889458}
+                        lngLocal={config?.longitud_local || -68.845839}
+                        radioKm={config?.delivery_radio_km || 5}
+                        onConfirmar={confirmarUbicacionMapa}
+                        onCancelar={() => setMostrarMapa(false)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Errores */}
+                  {errorUbic && !mostrarMapa && (
                     <div className="ch-error-ubic">
                       <p className="ch-error-titulo">{errorUbic.titulo}</p>
                       {errorUbic.pasos && (
@@ -271,25 +326,33 @@ export default function Checkout({ config, metodos, onClose }) {
                       )}
                       <div className="ch-error-btns">
                         {errorUbic.puedeReintentar && (
-                          <button className="ch-btn-reintentar" onClick={pedirUbicacion}>
-                            Intentar de nuevo
-                          </button>
+                          <button className="ch-btn-ubic" onClick={pedirUbicacion}>Intentar de nuevo</button>
                         )}
-                        <button className="ch-btn-retiro-fallback" onClick={() => { setTipoEntrega('retiro'); setErrorUbic(null); }}>
+                        <button className="ch-btn-mapa" onClick={() => { setMostrarMapa(true); setErrorUbic(null); }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          Ubicar en el mapa manualmente
+                        </button>
+                        <button className="ch-btn-retiro" onClick={() => { setTipoEntrega('retiro'); setErrorUbic(null); }}>
                           Mejor retiro por el local
                         </button>
                       </div>
                     </div>
                   )}
-                  <label className="ch-campo">
-                    <span>Calle y número *</span>
-                    <input type="text" value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Ej: Av. San Martín 1234" />
-                    {errores.direccion && <span className="ch-err">{errores.direccion}</span>}
-                  </label>
-                  <label className="ch-campo">
-                    <span>Piso / Depto (opcional)</span>
-                    <input type="text" value={pisoDepto} onChange={e => setPisoDepto(e.target.value)} placeholder="Ej: 3° B" />
-                  </label>
+
+                  {/* Detalles de dirección (cuando la ubicación está confirmada) */}
+                  {ubicacion && (
+                    <>
+                      <label className="ch-campo">
+                        <span>Calle y número *</span>
+                        <input type="text" value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Ej: Av. San Martín 1234" />
+                        {errores.direccion && <span className="ch-err">{errores.direccion}</span>}
+                      </label>
+                      <label className="ch-campo">
+                        <span>Piso / Depto (opcional)</span>
+                        <input type="text" value={pisoDepto} onChange={e => setPisoDepto(e.target.value)} placeholder="Ej: 3° B" />
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -346,34 +409,19 @@ export default function Checkout({ config, metodos, onClose }) {
         {/* ── FOOTER ── */}
         <div className="ch-footer">
           {paso === 'carrito' && (
-            <button className="ch-btn-primario" onClick={() => setPaso('entrega')}>
-              Continuar
-            </button>
+            <button className="ch-btn-primario" onClick={() => setPaso('entrega')}>Continuar</button>
           )}
           {paso === 'entrega' && (
             <button
               className="ch-btn-primario"
-              disabled={
-                !tipoEntrega ||
-                (tipoEntrega === 'delivery' && !ubicacion) ||
-                (tipoEntrega === 'delivery' && !direccion.trim())
-              }
-              onClick={() => {
-                if (tipoEntrega === 'delivery' && !direccion.trim()) {
-                  setErrores({ direccion: 'Ingresá tu dirección antes de continuar.' });
-                  return;
-                }
-                setErrores({});
-                setPaso('datos');
-              }}
+              disabled={!tipoEntrega || (tipoEntrega === 'delivery' && (!ubicacion || !direccion.trim()))}
+              onClick={() => { if (validarDatos !== undefined) setPaso('datos'); }}
             >
               Continuar
             </button>
           )}
           {paso === 'datos' && (
-            <button className="ch-btn-primario" onClick={() => { if (validarDatos()) setPaso('pago'); }}>
-              Continuar
-            </button>
+            <button className="ch-btn-primario" onClick={() => { if (validarDatos()) setPaso('pago'); }}>Continuar</button>
           )}
           {paso === 'pago' && (
             <button className="ch-btn-whatsapp" onClick={confirmarPedido}>
@@ -392,53 +440,46 @@ export default function Checkout({ config, metodos, onClose }) {
         .ch-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; flex-shrink: 0; }
         .ch-header-l { display: flex; align-items: center; gap: 10px; }
         .ch-back { background: #f0ebe3; border: none; color: #1a1510; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .ch-titulo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; }
+        .ch-titulo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: #1a1510; margin: 0; }
         .ch-close { background: #f0ebe3; border: none; color: #9a8f82; border-radius: 50%; width: 32px; height: 32px; font-size: 14px; cursor: pointer; }
-
-        /* Pasos */
-        .ch-steps { display: flex; align-items: center; padding: 0 20px 14px; gap: 0; flex-shrink: 0; border-bottom: 1px solid #ede8e0; }
+        .ch-steps { display: flex; align-items: center; padding: 0 20px 14px; flex-shrink: 0; border-bottom: 1px solid #ede8e0; }
         .ch-step { display: flex; align-items: center; gap: 6px; flex: 1; }
         .ch-step:not(:last-child)::after { content: ''; flex: 1; height: 1px; background: #ddd8d0; margin: 0 6px; }
-        .ch-step-dot { width: 22px; height: 22px; border-radius: 50%; background: #ddd8d0; color: #9a8f82; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s, color 0.2s; }
-        .ch-step-done .ch-step-dot { background: #c1440e; color: #fff; }
+        .ch-step-dot { width: 22px; height: 22px; border-radius: 50%; background: #ddd8d0; color: #9a8f82; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ch-step-done .ch-step-dot { background: #c1320a; color: #fff; }
         .ch-step-label { font-size: 11px; color: #9a8f82; white-space: nowrap; }
         .ch-step-done .ch-step-label { color: #1a1510; font-weight: 500; }
-
-        /* Body */
         .ch-body { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
         .ch-seccion { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; }
-
-        /* Items del carrito */
         .ch-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ede8e0; }
         .ch-item:last-of-type { border-bottom: none; }
         .ch-item-info { flex: 1; }
-        .ch-item-nombre { font-size: 14px; font-weight: 500; display: block; }
+        .ch-item-nombre { font-size: 14px; font-weight: 500; display: block; color: #1a1510; }
         .ch-item-precio { font-size: 13px; color: #6b6259; display: block; margin-top: 2px; }
         .ch-item-ctrl { display: flex; align-items: center; gap: 8px; }
-        .ch-ctrl { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #c1440e; background: transparent; color: #c1440e; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .ch-ctrl-cant { font-size: 15px; font-weight: 700; min-width: 18px; text-align: center; }
-        .ch-subtotal { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 4px; border-top: 1px solid #ede8e0; margin-top: 4px; }
-
-        /* Entrega */
+        .ch-ctrl { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #c1320a; background: transparent; color: #c1320a; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .ch-ctrl-cant { font-size: 15px; font-weight: 700; min-width: 18px; text-align: center; color: #1a1510; }
+        .ch-subtotal { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 4px; border-top: 1px solid #ede8e0; margin-top: 4px; color: #1a1510; }
         .ch-opciones-entrega { display: flex; flex-direction: column; gap: 10px; }
         .ch-opcion-entrega { display: flex; align-items: center; gap: 14px; background: #fff; border: 2px solid #ede8e0; border-radius: 12px; padding: 14px 16px; cursor: pointer; font-family: inherit; text-align: left; transition: border-color 0.15s; }
-        .ch-opcion-entrega.activa { border-color: #c1440e; background: #fff8f5; }
-        .ch-opcion-icon { font-size: 24px; flex-shrink: 0; }
+        .ch-opcion-entrega.activa { border-color: #c1320a; background: #fff8f5; }
+        .ch-opcion-icon { color: #9a8f82; flex-shrink: 0; }
+        .ch-opcion-entrega.activa .ch-opcion-icon { color: #c1320a; }
         .ch-opcion-titulo { font-size: 15px; font-weight: 600; color: #1a1510; display: block; }
         .ch-opcion-sub { font-size: 12px; color: #9a8f82; display: block; margin-top: 2px; }
         .ch-delivery-bloque { display: flex; flex-direction: column; gap: 12px; }
-        .ch-btn-ubic { background: #1a1510; color: #faf7f2; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; }
-        .ch-btn-ubic:disabled { opacity: 0.6; cursor: default; }
         .ch-ubic-intro { font-size: 13px; color: #9a8f82; margin: 0; line-height: 1.5; }
         .ch-ubic-opciones { display: flex; flex-direction: column; gap: 10px; }
-        .ch-ubic-o { text-align: center; font-size: 12px; color: #ccc5bb; }
-        .ch-ubic-ok-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .ch-o { text-align: center; font-size: 12px; color: #ccc5bb; }
+        .ch-ubic-ok-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f0faf4; border: 1px solid #b8dfc8; border-radius: 10px; padding: 12px 14px; }
         .ch-ubic-ok { font-size: 13px; color: #2a7a4a; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-        .ch-btn-cambiar-ubic { background: transparent; border: none; color: #9a8f82; font-size: 12px; cursor: pointer; font-family: inherit; text-decoration: underline; }
+        .ch-btn-cambiar { background: transparent; border: none; color: #9a8f82; font-size: 12px; cursor: pointer; font-family: inherit; text-decoration: underline; }
         .ch-ubic-loading { display: flex; align-items: center; gap: 8px; }
-        .ch-ubic-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
+        .ch-ubic-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .ch-btn-mapa { display: flex; align-items: center; justify-content: center; gap: 8px; background: #f7f5f2; border: 1.5px solid #e4ddd3; color: #1a1510; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: border-color 0.15s; }
+        .ch-btn-ubic { background: #1a1510; color: #faf7f2; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .ch-btn-ubic:disabled { opacity: 0.6; cursor: default; }
+        .ch-btn-mapa { display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border: 1.5px solid #e4ddd3; color: #1a1510; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; transition: border-color 0.15s; }
         .ch-btn-mapa:hover { border-color: #c1320a; }
         .ch-mapa-wrap { display: flex; flex-direction: column; gap: 10px; }
         .ch-mapa-intro { font-size: 13px; color: #9a8f82; margin: 0; line-height: 1.5; }
@@ -446,32 +487,22 @@ export default function Checkout({ config, metodos, onClose }) {
         .ch-error-titulo { font-size: 13px; font-weight: 600; color: #c1320a; margin: 0; line-height: 1.4; }
         .ch-error-pasos { font-size: 13px; color: #6b6259; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
         .ch-error-btns { display: flex; flex-direction: column; gap: 8px; }
-        .ch-btn-reintentar { background: #c1320a; color: #fff; border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
-        .ch-btn-retiro-fallback { background: transparent; border: 1px solid #e4ddd3; color: #6b6259; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
-
-        /* Campos */
-        .ch-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6b6259; }
+        .ch-btn-retiro { background: transparent; border: 1px solid #e4ddd3; color: #6b6259; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
+        .ch-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6b6259; font-weight: 500; }
         .ch-campo input, .ch-campo textarea { background: #fff; border: 1.5px solid #ddd8d0; border-radius: 10px; padding: 12px; font-size: 15px; color: #1a1510; font-family: inherit; outline: none; transition: border-color 0.15s; resize: none; }
-        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #c1440e; }
-        .ch-err { font-size: 12px; color: #c1440e; }
-
-        /* Métodos de pago */
+        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #c1320a; }
+        .ch-err { font-size: 12px; color: #c1320a; }
         .ch-metodos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        .ch-metodo { background: #fff; border: 2px solid #ede8e0; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; transition: border-color 0.15s; }
-        .ch-metodo.activo { border-color: #c1440e; background: #fff8f5; color: #c1440e; font-weight: 600; }
-
-        /* Resumen */
+        .ch-metodo { background: #fff; border: 2px solid #ede8e0; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; transition: border-color 0.15s; color: #1a1510; }
+        .ch-metodo.activo { border-color: #c1320a; background: #fff8f5; color: #c1320a; font-weight: 600; }
         .ch-resumen { background: #fff; border: 1px solid #ede8e0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
         .ch-resumen-row { display: flex; justify-content: space-between; font-size: 14px; color: #6b6259; }
         .ch-resumen-total { font-size: 18px; font-weight: 700; color: #1a1510; padding-top: 8px; border-top: 1px solid #ede8e0; margin-top: 4px; }
-
-        /* Footer */
         .ch-footer { padding: 12px 20px; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #ede8e0; flex-shrink: 0; }
         .ch-btn-primario { width: 100%; background: #1a1510; color: #faf7f2; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; transition: filter 0.15s; }
         .ch-btn-primario:hover { filter: brightness(1.15); }
         .ch-btn-primario:disabled { opacity: 0.4; cursor: default; }
-        .ch-btn-whatsapp { width: 100%; background: #25d366; color: #fff; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: filter 0.15s; }
-        .ch-btn-whatsapp:hover { filter: brightness(1.08); }
+        .ch-btn-whatsapp { width: 100%; background: #25d366; color: #fff; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
       `}</style>
     </>
   );
