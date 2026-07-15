@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 
-export default function LoginPage() {
+function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const sinAcceso    = searchParams.get('error') === 'sin-acceso';
@@ -277,5 +277,17 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#f7f5f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 28, height: 28, border: '2.5px solid #e4ddd3', borderTopColor: '#c1320a', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
