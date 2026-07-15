@@ -26,19 +26,58 @@ export default function Checkout({ config, metodos, onClose }) {
   // ── GEOLOCALIZACIÓN ──────────────────────────────────────────────────────────
   async function pedirUbicacion() {
     setLoadingUbic(true);
-    setErrorUbic('');
+    setErrorUbic(null);
+    setUbicacion(null);
+
+    // Detectar si es Android o iOS para dar instrucciones específicas
+    const esIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const esAndroid = /android/i.test(navigator.userAgent);
+
     try {
-      const { lat, lng } = await obtenerUbicacion();
+      const { lat, lng, precision } = await obtenerUbicacion();
       const dist = distanciaKm(lat, lng, config.latitud_local, config.longitud_local);
 
       if (dist > config.delivery_radio_km) {
-        setErrorUbic(`Tu ubicación está a ${dist.toFixed(1)} km. Solo hacemos delivery hasta ${config.delivery_radio_km} km.`);
+        setErrorUbic({
+          titulo: `Tu ubicación está a ${dist.toFixed(1)} km. Solo hacemos delivery hasta ${config.delivery_radio_km} km del local.`,
+          puedeReintentar: false,
+        });
         setUbicacion(null);
       } else {
-        setUbicacion({ lat, lng, dist: dist.toFixed(1) });
+        setUbicacion({ lat, lng, dist: dist.toFixed(1), precision });
       }
     } catch (e) {
-      setErrorUbic(e.message);
+      const msg = e.message || '';
+
+      if (msg.includes('denegado') || msg.includes('PERMISSION_DENIED')) {
+        // El usuario negó el permiso
+        setErrorUbic({
+          titulo: 'Bloqueaste el permiso de ubicación para esta página.',
+          pasos: esIOS
+            ? ['Abrí Configuración', 'Entrá a Safari (o tu navegador)', 'Ubicación → Permitir']
+            : esAndroid
+            ? ['Tocá el candado o ícono de info en la barra del navegador', 'Buscá "Ubicación" y cambialo a "Permitir"', 'Recargá la página e intentá de nuevo']
+            : ['Hacé click en el ícono de candado en la barra de dirección', 'Cambiá el permiso de Ubicación a "Permitir"', 'Recargá la página e intentá de nuevo'],
+          puedeReintentar: false,
+        });
+      } else if (msg.includes('GPS') || msg.includes('activado') || msg.includes('POSITION_UNAVAILABLE')) {
+        // GPS apagado
+        setErrorUbic({
+          titulo: 'El GPS está desactivado en tu celular.',
+          pasos: esIOS
+            ? ['Abrí Configuración', 'Tocá "Privacidad y seguridad"', 'Tocá "Localización"', 'Activá "Localización"']
+            : esAndroid
+            ? ['Deslizá desde arriba para abrir el panel de notificaciones', 'Tocá el ícono de "Ubicación" para activarlo', 'Volvé a la app e intentá de nuevo']
+            : ['Activá la ubicación/GPS en la configuración de tu dispositivo'],
+          puedeReintentar: true,
+        });
+      } else {
+        setErrorUbic({
+          titulo: 'No pudimos obtener tu ubicación.',
+          pasos: ['Asegurate de tener el GPS activado', 'Verificá que la app tenga permiso de ubicación', 'Intentá de nuevo'],
+          puedeReintentar: true,
+        });
+      }
     }
     setLoadingUbic(false);
   }
@@ -223,12 +262,22 @@ export default function Checkout({ config, metodos, onClose }) {
                   )}
                   {errorUbic && (
                     <div className="ch-error-ubic">
-                      <p>{errorUbic}</p>
-                      {errorUbic.includes('km') && (
-                        <button className="ch-btn-retiro-fallback" onClick={() => { setTipoEntrega('retiro'); setErrorUbic(''); }}>
-                          Elegir retiro por el local
-                        </button>
+                      <p className="ch-error-titulo">{errorUbic.titulo}</p>
+                      {errorUbic.pasos && (
+                        <ol className="ch-error-pasos">
+                          {errorUbic.pasos.map((p, i) => <li key={i}>{p}</li>)}
+                        </ol>
                       )}
+                      <div className="ch-error-btns">
+                        {errorUbic.puedeReintentar && (
+                          <button className="ch-btn-reintentar" onClick={pedirUbicacion}>
+                            Intentar de nuevo
+                          </button>
+                        )}
+                        <button className="ch-btn-retiro-fallback" onClick={() => { setTipoEntrega('retiro'); setErrorUbic(null); }}>
+                          Mejor retiro por el local
+                        </button>
+                      </div>
                     </div>
                   )}
                   <label className="ch-campo">
@@ -384,8 +433,12 @@ export default function Checkout({ config, metodos, onClose }) {
         .ch-ubic-loading { display: flex; align-items: center; gap: 8px; }
         .ch-ubic-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .ch-error-ubic { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #c1440e; }
-        .ch-btn-retiro-fallback { background: transparent; border: 1px solid #c1440e; color: #c1440e; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
+        .ch-error-ubic { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+        .ch-error-titulo { font-size: 13px; font-weight: 600; color: #c1320a; margin: 0; line-height: 1.4; }
+        .ch-error-pasos { font-size: 13px; color: #6b6259; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
+        .ch-error-btns { display: flex; flex-direction: column; gap: 8px; }
+        .ch-btn-reintentar { background: #c1320a; color: #fff; border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+        .ch-btn-retiro-fallback { background: transparent; border: 1px solid #e4ddd3; color: #6b6259; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
 
         /* Campos */
         .ch-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6b6259; }
