@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar }) {
-  const latLocal    = lat;
-  const lngLocal    = lng;
+  // Valores por defecto: centro de Mendoza, por si config aún no cargó
+  const latLocal = lat || -32.889458;
+  const lngLocal = lng || -68.845839;
   const mapRef      = useRef(null);
   const mapInstance = useRef(null);
   const [pinPos, setPinPos]             = useState({ lat: latLocal, lng: lngLocal });
@@ -14,6 +15,8 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
     async function initMap() {
       if (mapInstance.current) return;
       if (!mapRef.current) return;
+      // Doble chequeo por si las coords siguen siendo undefined
+      if (!latLocal || !lngLocal) return;
 
       const L = (await import('leaflet')).default;
 
