@@ -7,15 +7,23 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
   const lngLocal    = lng;
   const mapRef      = useRef(null);
   const mapInstance = useRef(null);
-  const markerRef   = useRef(null);
   const [pinPos, setPinPos]             = useState({ lat: latLocal, lng: lngLocal });
   const [dentroDeZona, setDentroDeZona] = useState(true);
 
   useEffect(() => {
     async function initMap() {
-      const L = (await import('leaflet')).default;
-      await import('leaflet/dist/leaflet.css');
       if (mapInstance.current) return;
+      if (!mapRef.current) return;
+
+      const L = (await import('leaflet')).default;
+
+      // Fix crítico para íconos en Next.js
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
 
       const map = L.map(mapRef.current, {
         center: [latLocal, lngLocal],
@@ -24,7 +32,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         attributionControl: false,
       });
 
-      // CartoDB Positron — blanco, minimalista, sin ruido visual
+      // CartoDB Positron — blanco, limpio, sin ruido visual
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 19,
@@ -36,7 +44,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Círculo de cobertura sutil
+      // Círculo de cobertura
       L.circle([latLocal, lngLocal], {
         radius: radioKm * 1000,
         color: '#c1320a',
@@ -46,7 +54,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         dashArray: '6 5',
       }).addTo(map);
 
-      // Pin del local — punto rojo fijo pequeño
+      // Pin del local — punto rojo fijo
       L.marker([latLocal, lngLocal], {
         icon: L.divIcon({
           html: `<div style="width:12px;height:12px;background:#c1320a;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`,
@@ -65,7 +73,10 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         iconAnchor: [12, 24],
       });
 
-      const marker = L.marker([latLocal, lngLocal], { draggable: true, icon: iconCliente }).addTo(map);
+      const marker = L.marker([latLocal, lngLocal], {
+        draggable: true,
+        icon: iconCliente,
+      }).addTo(map);
 
       function actualizar(lat, lng) {
         const dist = calcDist(lat, lng, latLocal, lngLocal);
@@ -73,23 +84,37 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         setDentroDeZona(dist <= radioKm);
       }
 
-      marker.on('drag', () => { const p = marker.getLatLng(); actualizar(p.lat, p.lng); });
+      marker.on('drag',    () => { const p = marker.getLatLng(); actualizar(p.lat, p.lng); });
       marker.on('dragend', () => { const p = marker.getLatLng(); actualizar(p.lat, p.lng); });
-      map.on('click', (e) => { marker.setLatLng([e.latlng.lat, e.latlng.lng]); actualizar(e.latlng.lat, e.latlng.lng); });
+      map.on('click', (e) => {
+        marker.setLatLng([e.latlng.lat, e.latlng.lng]);
+        actualizar(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Forzar refresco del tamaño después de que el DOM esté listo
+      setTimeout(() => map.invalidateSize(), 100);
 
       mapInstance.current = map;
-      markerRef.current   = marker;
     }
 
     initMap();
-    return () => { if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; } };
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
   }, []);
 
   function calcDist(lat1, lng1, lat2, lng2) {
-    const R = 6371;
+    const R    = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    const a    = Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
@@ -104,12 +129,18 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
       </div>
 
       {!dentroDeZona && (
-        <div className="fuera-zona">Esa ubicación está fuera de nuestra zona de delivery ({radioKm} km).</div>
+        <div className="fuera-zona">
+          Esa ubicación está fuera de nuestra zona de delivery ({radioKm} km).
+        </div>
       )}
 
       <div className="acciones">
         <button className="btn-cancel" onClick={onCancelar}>Cancelar</button>
-        <button className="btn-ok" disabled={!dentroDeZona} onClick={() => onConfirmar(pinPos.lat, pinPos.lng)}>
+        <button
+          className="btn-ok"
+          disabled={!dentroDeZona}
+          onClick={() => onConfirmar(pinPos.lat, pinPos.lng)}
+        >
           Confirmar ubicación
         </button>
       </div>
@@ -126,8 +157,12 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         }
 
         .mapa {
-          height: 300px; border-radius: 14px; overflow: hidden;
-          border: 1.5px solid #e4ddd3; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          height: 300px;
+          width: 100%;
+          border-radius: 14px;
+          overflow: hidden;
+          border: 1.5px solid #e4ddd3;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
         }
 
         .leyenda { display: flex; gap: 16px; font-size: 12px; color: #9a8f82; }

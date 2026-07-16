@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import 'leaflet/dist/leaflet.css';
 
 :root {
   --background: #ffffff;
@@ -11,9 +12,6 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
-
-/* Eliminamos el override de modo oscuro automático —
-   cada sección de la app maneja su propio fondo */
 
 body {
   background: transparent;
