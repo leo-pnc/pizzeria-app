@@ -4,23 +4,37 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar }) {
   // Valores por defecto: centro de Mendoza, por si config aún no cargó
-  const latLocal = lat || -32.889458;
-  const lngLocal = lng || -68.845839;
-  const mapRef      = useRef(null);
-  const mapInstance = useRef(null);
-  const [pinPos, setPinPos]             = useState({ lat: latLocal, lng: lngLocal });
+  const latInicial = lat || -32.889458;
+  const lngInicial = lng || -68.845839;
+
+  const mapRef          = useRef(null);
+  const mapInstance     = useRef(null);
+  const markerLocalRef  = useRef(null);   // pin fijo del local
+  const circleRef       = useRef(null);   // círculo de cobertura
+  const markerClienteRef = useRef(null);  // pin draggable del cliente
+
+  const [pinPos, setPinPos]             = useState({ lat: latInicial, lng: lngInicial });
   const [dentroDeZona, setDentroDeZona] = useState(true);
 
+  function calcDist(lat1, lng1, lat2, lng2) {
+    const R    = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a    = Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Inicialización del mapa (una sola vez) ──────────────────────────────────
   useEffect(() => {
     async function initMap() {
       if (mapInstance.current) return;
       if (!mapRef.current) return;
-      // Doble chequeo por si las coords siguen siendo undefined
-      if (!latLocal || !lngLocal) return;
 
       const L = (await import('leaflet')).default;
 
-      // Fix crítico para íconos en Next.js
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -29,13 +43,12 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
       });
 
       const map = L.map(mapRef.current, {
-        center: [latLocal, lngLocal],
+        center: [latInicial, lngInicial],
         zoom: 15,
         zoomControl: false,
         attributionControl: false,
       });
 
-      // CartoDB Positron — blanco, limpio, sin ruido visual
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 19,
@@ -47,9 +60,9 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Círculo de cobertura
-      L.circle([latLocal, lngLocal], {
-        radius: radioKm * 1000,
+      // Círculo de cobertura — guardado en ref para poder moverlo después
+      const circle = L.circle([latInicial, lngInicial], {
+        radius: (radioKm || 5) * 1000,
         color: '#c1320a',
         fillColor: '#c1320a',
         fillOpacity: 0.05,
@@ -57,8 +70,8 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         dashArray: '6 5',
       }).addTo(map);
 
-      // Pin del local — punto rojo fijo
-      L.marker([latLocal, lngLocal], {
+      // Pin del local — guardado en ref para poder moverlo después
+      const markerLocal = L.marker([latInicial, lngInicial], {
         icon: L.divIcon({
           html: `<div style="width:12px;height:12px;background:#c1320a;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`,
           className: '',
@@ -76,28 +89,32 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         iconAnchor: [12, 24],
       });
 
-      const marker = L.marker([latLocal, lngLocal], {
+      const markerCliente = L.marker([latInicial, lngInicial], {
         draggable: true,
         icon: iconCliente,
       }).addTo(map);
 
-      function actualizar(lat, lng) {
-        const dist = calcDist(lat, lng, latLocal, lngLocal);
-        setPinPos({ lat, lng });
+      function actualizar(latC, lngC) {
+        // Siempre calculamos contra la posición ACTUAL del pin del local
+        const posLocal = markerLocalRef.current.getLatLng();
+        const dist = calcDist(latC, lngC, posLocal.lat, posLocal.lng);
+        setPinPos({ lat: latC, lng: lngC });
         setDentroDeZona(dist <= radioKm);
       }
 
-      marker.on('drag',    () => { const p = marker.getLatLng(); actualizar(p.lat, p.lng); });
-      marker.on('dragend', () => { const p = marker.getLatLng(); actualizar(p.lat, p.lng); });
+      markerCliente.on('drag',    () => { const p = markerCliente.getLatLng(); actualizar(p.lat, p.lng); });
+      markerCliente.on('dragend', () => { const p = markerCliente.getLatLng(); actualizar(p.lat, p.lng); });
       map.on('click', (e) => {
-        marker.setLatLng([e.latlng.lat, e.latlng.lng]);
+        markerCliente.setLatLng([e.latlng.lat, e.latlng.lng]);
         actualizar(e.latlng.lat, e.latlng.lng);
       });
 
-      // Forzar refresco del tamaño después de que el DOM esté listo
       setTimeout(() => map.invalidateSize(), 100);
 
-      mapInstance.current = map;
+      mapInstance.current      = map;
+      markerLocalRef.current   = markerLocal;
+      circleRef.current        = circle;
+      markerClienteRef.current = markerCliente;
     }
 
     initMap();
@@ -110,16 +127,24 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
     };
   }, []);
 
-  function calcDist(lat1, lng1, lat2, lng2) {
-    const R    = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a    = Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
+  // ── Si lat/lng del LOCAL cambian después del montaje (ej: config tardó
+  //    en cargar, o el dueño actualizó la ubicación) → mover pin, círculo,
+  //    y recentrar el mapa ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapInstance.current || !lat || !lng) return;
+    if (!markerLocalRef.current || !circleRef.current) return;
+
+    markerLocalRef.current.setLatLng([lat, lng]);
+    circleRef.current.setLatLng([lat, lng]);
+    mapInstance.current.setView([lat, lng], 15);
+
+    // Recalcular si el pin del cliente sigue dentro de la nueva zona
+    if (markerClienteRef.current) {
+      const posCliente = markerClienteRef.current.getLatLng();
+      const dist = calcDist(posCliente.lat, posCliente.lng, lat, lng);
+      setDentroDeZona(dist <= radioKm);
+    }
+  }, [lat, lng, radioKm]);
 
   return (
     <div className="wrap">
