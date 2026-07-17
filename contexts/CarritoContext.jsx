@@ -1,13 +1,40 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 const CarritoCtx = createContext(null);
+const STORAGE_KEY = 'donadrianos_carrito';
+
+function cargarCarritoGuardado() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function CarritoProvider({ children }) {
   const [items, setItems] = useState([]);
+  const yaCargado = useRef(false);
 
-  // key única por producto+variante+promo
+  // Cargar carrito guardado al montar (solo en el cliente)
+  useEffect(() => {
+    setItems(cargarCarritoGuardado());
+    yaCargado.current = true;
+  }, []);
+
+  // Guardar cada vez que cambia (evita pisar el storage antes de la carga inicial)
+  useEffect(() => {
+    if (!yaCargado.current) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // Si falla (modo privado, storage lleno, etc.) seguimos sin persistencia
+    }
+  }, [items]);
+
   function keyItem(item) {
     return `${item.tipo}_${item.id}_${item.variante_id || ''}`;
   }
@@ -33,7 +60,10 @@ export function CarritoProvider({ children }) {
     });
   }, []);
 
-  const vaciar = useCallback(() => setItems([]), []);
+  const vaciar = useCallback(() => {
+    setItems([]);
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  }, []);
 
   const cantidad = items.reduce((s, i) => s + i.cantidad, 0);
   const subtotal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);

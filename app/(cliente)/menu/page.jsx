@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { supabase } from '../../../lib/supabaseClient';
 import { useCarrito } from '../../../contexts/CarritoContext';
 import Checkout from '../../../components/cliente/Checkout';
-import { estaAbiertoAhora, proximaApertura } from '../../../lib/clienteUtils';
+import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAvisoApertura, notificarAperturaSiCorresponde } from '../../../lib/clienteUtils';
 
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
@@ -18,6 +18,7 @@ export default function MenuPage() {
   const [abierto, setAbierto]             = useState(null);
   const [proxApertura, setProxApertura]   = useState(null);
   const [toast, setToast]                 = useState(null);
+  const [modalReapertura, setModalReapertura] = useState(false);
   const horariosRef = useRef([]);
   const franjasRef  = useRef([]);
   const configRef   = useRef(null);
@@ -37,12 +38,16 @@ export default function MenuPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (!configRef.current || !horariosRef.current.length) return;
+      const estabaAbierto = abierto;
       const estaAbierto = estaAbiertoAhora(configRef.current, horariosRef.current, franjasRef.current);
       setAbierto(estaAbierto);
       setProxApertura(estaAbierto ? null : proximaApertura(horariosRef.current, franjasRef.current));
+      if (estaAbierto && estabaAbierto === false) {
+        manejarReapertura();
+      }
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [abierto]);
 
   // ── Escuchar en tiempo real si el dueño cambia el estado manual
   //    (abrir/cerrar a mano desde el panel admin) ─────────────────────────────
@@ -56,15 +61,25 @@ export default function MenuPage() {
           const estaAbierto = estaAbiertoAhora(payload.new, horariosRef.current, franjasRef.current);
           setAbierto(estaAbierto);
           setProxApertura(estaAbierto ? null : proximaApertura(horariosRef.current, franjasRef.current));
-          if (estaAbierto) {
-            setToast({ tipo: 'ok', texto: '¡Ya estamos abiertos! Ya podés confirmar tu pedido.' });
-            setTimeout(() => setToast(null), 4000);
-          }
+          if (estaAbierto) manejarReapertura();
         }
       })
       .subscribe();
     return () => supabase.removeChannel(canal);
   }, []);
+
+  // ── Cuando el local reabre: si había un aviso guardado, mostramos un
+  //    modal grande invitando a confirmar, y disparamos notificación
+  //    del sistema si el navegador la tiene permitida ──────────────────────────
+  function manejarReapertura() {
+    if (hayAvisoAperturaGuardado() && items.length > 0) {
+      setModalReapertura(true);
+      notificarAperturaSiCorresponde();
+    } else {
+      setToast({ tipo: 'ok', texto: '¡Ya estamos abiertos! Ya podés confirmar tu pedido.' });
+      setTimeout(() => setToast(null), 4000);
+    }
+  }
 
   // ── Toast al intentar agregar algo mientras está cerrado ────────────────────
   function manejarAgregar(item) {
@@ -417,6 +432,32 @@ export default function MenuPage() {
         </div>
       )}
 
+      {/* ── MODAL DE REAPERTURA (si había pedido esperando) ── */}
+      {modalReapertura && (
+        <div className="modal-reap-backdrop" onClick={() => setModalReapertura(false)}>
+          <div className="modal-reap" onClick={e => e.stopPropagation()}>
+            <div className="modal-reap-icono">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h2>¡Ya estamos abiertos!</h2>
+            <p>Tenés un pedido armado esperando. ¿Lo confirmamos ahora?</p>
+            <button
+              className="modal-reap-btn-si"
+              onClick={() => {
+                cancelarAvisoApertura();
+                setModalReapertura(false);
+                setShowCheckout(true);
+              }}
+            >
+              Revisar y confirmar pedido
+            </button>
+            <button className="modal-reap-btn-no" onClick={() => setModalReapertura(false)}>
+              Todavía no
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── CARRITO FAB ── */}
       {cantidad > 0 && !showCheckout && (
         <button className={`fab ${abierto === false ? 'fab-cerrado' : ''}`} onClick={() => setShowCheckout(true)}>
@@ -547,6 +588,41 @@ export default function MenuPage() {
         .fab-cerrado { background: #2a2117; }
         .fab-badge-cerrado { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #c1320a; color: #fff; border-radius: 20px; padding: 2px 7px; }
         .fab-total { background: rgba(255,255,255,0.1); color: #f2c97e; font-size: 14px; font-weight: 700; display: flex; align-items: center; padding: 13px 16px; border-left: 1px solid rgba(255,255,255,0.1); }
+
+        .modal-reap-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 70; padding: 24px; backdrop-filter: blur(2px);
+        }
+        .modal-reap {
+          background: #fff; border-radius: 20px; padding: 32px 28px;
+          max-width: 340px; width: 100%; text-align: center;
+          display: flex; flex-direction: column; align-items: center; gap: 4px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+          animation: modalIn 0.3s cubic-bezier(0.32,0.72,0,1);
+        }
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.92) translateY(10px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-reap-icono {
+          width: 60px; height: 60px; border-radius: 50%;
+          background: rgba(45,122,58,0.1); color: #2d7a3a;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 10px;
+        }
+        .modal-reap h2 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1510; margin: 0; }
+        .modal-reap p { font-size: 14px; color: #6b6259; line-height: 1.5; margin: 4px 0 18px; }
+        .modal-reap-btn-si {
+          width: 100%; background: #c1320a; color: #fff; border: none;
+          border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700;
+          font-family: inherit; cursor: pointer; margin-bottom: 8px; transition: filter 0.15s;
+        }
+        .modal-reap-btn-si:hover { filter: brightness(1.1); }
+        .modal-reap-btn-no {
+          width: 100%; background: transparent; border: none; color: #9a8f82;
+          font-size: 13px; font-family: inherit; cursor: pointer; padding: 6px;
+        }
 
         .toast {
           position: fixed;
