@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { supabase } from '../../../lib/supabaseClient';
 import { useCarrito } from '../../../contexts/CarritoContext';
 import Checkout from '../../../components/cliente/Checkout';
+import { estaAbiertoAhora, proximaApertura } from '../../../lib/clienteUtils';
 
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
@@ -15,6 +16,7 @@ export default function MenuPage() {
   const [promociones, setPromociones]     = useState([]);
   const [metodos, setMetodos]             = useState([]);
   const [abierto, setAbierto]             = useState(null);
+  const [proxApertura, setProxApertura]   = useState(null);
   const [categoriaActiva, setCatActiva]   = useState(null);
   const [busqueda, setBusqueda]           = useState('');
   const [showCheckout, setShowCheckout]   = useState(false);
@@ -35,6 +37,8 @@ export default function MenuPage() {
       { data: promos },
       { data: promoItems },
       { data: mets },
+      { data: horarios },
+      { data: franjas },
     ] = await Promise.all([
       supabase.from('local_config').select('*').single(),
       supabase.from('categorias').select('*').eq('activa', true).order('orden'),
@@ -43,9 +47,16 @@ export default function MenuPage() {
       supabase.from('promociones').select('*').eq('activa', true).order('orden'),
       supabase.from('promocion_items').select('*'),
       supabase.from('metodos_pago').select('*').eq('activo', true).order('orden'),
+      supabase.from('horarios').select('*'),
+      supabase.from('horario_franjas').select('*'),
     ]);
 
-    if (cfg) { setConfig(cfg); setAbierto(cfg.esta_abierto_manual ?? true); }
+    if (cfg && horarios && franjas) {
+      setConfig(cfg);
+      const estaAbierto = estaAbiertoAhora(cfg, horarios, franjas);
+      setAbierto(estaAbierto);
+      if (!estaAbierto) setProxApertura(proximaApertura(horarios, franjas));
+    }
     if (cats) { setCategorias(cats); setCatActiva(cats[0]?.id ?? null); }
     if (prods && vars) {
       setProductos(prods.map(p => ({ ...p, variantes: vars.filter(v => v.producto_id === p.id) })));
@@ -233,7 +244,14 @@ export default function MenuPage() {
         {abierto !== null && (
           <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
             <span className="estado-dot" />
-            <span>{abierto ? 'Aceptando pedidos ahora' : 'Cerrado por el momento — podés hacer tu consulta por WhatsApp'}</span>
+            <span>
+              {abierto
+                ? 'Aceptando pedidos ahora'
+                : proxApertura
+                  ? `Cerrado ahora · Abrimos ${proxApertura}`
+                  : 'Cerrado por el momento'
+              }
+            </span>
           </div>
         )}
 
@@ -350,7 +368,13 @@ export default function MenuPage() {
 
       {/* ── CHECKOUT ── */}
       {showCheckout && (
-        <Checkout config={config} metodos={metodos} onClose={() => setShowCheckout(false)} />
+        <Checkout
+          config={config}
+          metodos={metodos}
+          abierto={abierto}
+          proxApertura={proxApertura}
+          onClose={() => setShowCheckout(false)}
+        />
       )}
 
       <style jsx global>{`
