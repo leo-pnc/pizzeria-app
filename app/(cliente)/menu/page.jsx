@@ -419,10 +419,13 @@ export default function MenuPage() {
 
       {/* ── CARRITO FAB ── */}
       {cantidad > 0 && !showCheckout && (
-        <button className="fab" onClick={() => setShowCheckout(true)}>
+        <button className={`fab ${abierto === false ? 'fab-cerrado' : ''}`} onClick={() => setShowCheckout(true)}>
           <div className="fab-izq">
             <span className="fab-cant">{cantidad}</span>
-            <span className="fab-label">Ver pedido</span>
+            <span className="fab-label">
+              {abierto === false ? 'Ver pedido' : 'Ver pedido'}
+              {abierto === false && <span className="fab-badge-cerrado">Cerrado</span>}
+            </span>
           </div>
           <span className="fab-total">${subtotal.toLocaleString('es-AR')}</span>
         </button>
@@ -540,7 +543,9 @@ export default function MenuPage() {
         .fab:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.3); transform: translateX(-50%) translateY(-1px); }
         .fab-izq { display: flex; align-items: center; gap: 10px; padding: 13px 16px; flex: 1; }
         .fab-cant { background: #c1320a; color: #fff; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
-        .fab-label { font-size: 14px; font-weight: 600; }
+        .fab-label { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .fab-cerrado { background: #2a2117; }
+        .fab-badge-cerrado { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #c1320a; color: #fff; border-radius: 20px; padding: 2px 7px; }
         .fab-total { background: rgba(255,255,255,0.1); color: #f2c97e; font-size: 14px; font-weight: 700; display: flex; align-items: center; padding: 13px 16px; border-left: 1px solid rgba(255,255,255,0.1); }
 
         .toast {
