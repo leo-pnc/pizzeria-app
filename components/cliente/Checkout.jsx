@@ -306,8 +306,8 @@ export default function Checkout({ config, metodos, onClose }) {
                     <div className="ch-mapa-wrap">
                       <p className="ch-mapa-intro">Mové el pin hasta tu domicilio y tocá <strong>Confirmar ubicación</strong>.</p>
                       <MapSelector
-                        latLocal={config?.latitud_local || -32.889458}
-                        lngLocal={config?.longitud_local || -68.845839}
+                        lat={config?.latitud_local || -32.889458}
+                        lng={config?.longitud_local || -68.845839}
                         radioKm={config?.delivery_radio_km || 5}
                         onConfirmar={confirmarUbicacionMapa}
                         onCancelar={() => setMostrarMapa(false)}
