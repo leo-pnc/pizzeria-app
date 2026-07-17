@@ -17,6 +17,10 @@ export default function MenuPage() {
   const [metodos, setMetodos]             = useState([]);
   const [abierto, setAbierto]             = useState(null);
   const [proxApertura, setProxApertura]   = useState(null);
+  const [toast, setToast]                 = useState(null);
+  const horariosRef = useRef([]);
+  const franjasRef  = useRef([]);
+  const configRef   = useRef(null);
   const [categoriaActiva, setCatActiva]   = useState(null);
   const [busqueda, setBusqueda]           = useState('');
   const [showCheckout, setShowCheckout]   = useState(false);
@@ -27,6 +31,49 @@ export default function MenuPage() {
   const busqRef     = useRef(null);
 
   useEffect(() => { cargar(); }, []);
+
+  // ── Recalcular apertura automáticamente cada minuto (para cuando llega
+  //    la hora de abrir/cerrar según el horario programado) ──────────────────
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!configRef.current || !horariosRef.current.length) return;
+      const estaAbierto = estaAbiertoAhora(configRef.current, horariosRef.current, franjasRef.current);
+      setAbierto(estaAbierto);
+      setProxApertura(estaAbierto ? null : proximaApertura(horariosRef.current, franjasRef.current));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Escuchar en tiempo real si el dueño cambia el estado manual
+  //    (abrir/cerrar a mano desde el panel admin) ─────────────────────────────
+  useEffect(() => {
+    const canal = supabase
+      .channel('local-config-cliente')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'local_config' }, (payload) => {
+        configRef.current = payload.new;
+        setConfig(payload.new);
+        if (horariosRef.current.length) {
+          const estaAbierto = estaAbiertoAhora(payload.new, horariosRef.current, franjasRef.current);
+          setAbierto(estaAbierto);
+          setProxApertura(estaAbierto ? null : proximaApertura(horariosRef.current, franjasRef.current));
+          if (estaAbierto) {
+            setToast({ tipo: 'ok', texto: '¡Ya estamos abiertos! Ya podés confirmar tu pedido.' });
+            setTimeout(() => setToast(null), 4000);
+          }
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(canal);
+  }, []);
+
+  // ── Toast al intentar agregar algo mientras está cerrado ────────────────────
+  function manejarAgregar(item) {
+    agregar(item);
+    if (abierto === false) {
+      setToast({ tipo: 'info', texto: 'Estamos cerrados ahora — podés armar tu pedido y confirmarlo cuando abramos.' });
+      setTimeout(() => setToast(null), 3500);
+    }
+  }
 
   async function cargar() {
     const [
@@ -53,9 +100,12 @@ export default function MenuPage() {
 
     if (cfg && horarios && franjas) {
       setConfig(cfg);
+      configRef.current   = cfg;
+      horariosRef.current = horarios;
+      franjasRef.current  = franjas;
       const estaAbierto = estaAbiertoAhora(cfg, horarios, franjas);
       setAbierto(estaAbierto);
-      if (!estaAbierto) setProxApertura(proximaApertura(horarios, franjas));
+      setProxApertura(estaAbierto ? null : proximaApertura(horarios, franjas));
     }
     if (cats) { setCategorias(cats); setCatActiva(cats[0]?.id ?? null); }
     if (prods && vars) {
@@ -135,7 +185,7 @@ export default function MenuPage() {
                       <span className="ctrl-n">{cantProd(prod.id)}</span>
                     </>
                   )}
-                  <button className="ctrl-btn ctrl-add" onClick={() => agregar({ tipo: 'producto', id: prod.id, nombre_snapshot: prod.nombre, precio: prod.precio, imagen_url: prod.imagen_url })}>+</button>
+                  <button className="ctrl-btn ctrl-add" onClick={() => manejarAgregar({ tipo: 'producto', id: prod.id, nombre_snapshot: prod.nombre, precio: prod.precio, imagen_url: prod.imagen_url })}>+</button>
                 </div>
               </div>
             )}
@@ -167,7 +217,7 @@ export default function MenuPage() {
                       <span className="ctrl-n">{cantProd(prod.id, v.id)}</span>
                     </>
                   )}
-                  <button className="ctrl-btn ctrl-add" onClick={() => agregar({ tipo: 'producto', id: prod.id, variante_id: v.id, variante_nombre: v.nombre, nombre_snapshot: `${prod.nombre} (${v.nombre})`, precio: v.precio, imagen_url: prod.imagen_url })}>+</button>
+                  <button className="ctrl-btn ctrl-add" onClick={() => manejarAgregar({ tipo: 'producto', id: prod.id, variante_id: v.id, variante_nombre: v.nombre, nombre_snapshot: `${prod.nombre} (${v.nombre})`, precio: v.precio, imagen_url: prod.imagen_url })}>+</button>
                 </div>
               </div>
             ))}
@@ -196,7 +246,7 @@ export default function MenuPage() {
                     <span className="ctrl-n">{cant}</span>
                   </>
                 )}
-                <button className="ctrl-btn ctrl-add" onClick={() => agregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo })}>+</button>
+                <button className="ctrl-btn ctrl-add" onClick={() => manejarAgregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo })}>+</button>
               </div>
             </div>
           </div>
@@ -355,6 +405,18 @@ export default function MenuPage() {
         )}
       </main>
 
+      {/* ── TOAST ── */}
+      {toast && (
+        <div className={`toast toast-${toast.tipo}`}>
+          {toast.tipo === 'ok' ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          )}
+          <span>{toast.texto}</span>
+        </div>
+      )}
+
       {/* ── CARRITO FAB ── */}
       {cantidad > 0 && !showCheckout && (
         <button className="fab" onClick={() => setShowCheckout(true)}>
@@ -480,6 +542,33 @@ export default function MenuPage() {
         .fab-cant { background: #c1320a; color: #fff; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
         .fab-label { font-size: 14px; font-weight: 600; }
         .fab-total { background: rgba(255,255,255,0.1); color: #f2c97e; font-size: 14px; font-weight: 700; display: flex; align-items: center; padding: 13px 16px; border-left: 1px solid rgba(255,255,255,0.1); }
+
+        .toast {
+          position: fixed;
+          bottom: 90px;
+          left: 50%;
+          transform: translateX(-50%);
+          max-width: calc(100vw - 32px);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #1a1510;
+          color: #faf7f2;
+          padding: 13px 18px;
+          border-radius: 12px;
+          font-size: 13px;
+          line-height: 1.4;
+          box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+          z-index: 45;
+          animation: toastIn 0.25s ease;
+        }
+        @keyframes toastIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .toast-info svg { color: #c1320a; flex-shrink: 0; }
+        .toast-ok svg { color: #6fd48a; flex-shrink: 0; }
+        .toast-ok { background: #1a1510; }
       `}</style>
     </div>
   );
