@@ -34,6 +34,17 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
   const [cliente, setCliente]         = useState({ nombre: '', telefono: '', aclaraciones: '' });
   const [metodoPago, setMetodoPago]   = useState('');
   const [avisando, setAvisando]       = useState(false);
+  const [horarioDeseado, setHorarioDeseado] = useState('antes_posible'); // antes_posible | sin_apuro | personalizado
+  const [horaPersonalizada, setHoraPersonalizada] = useState('');
+  const [guardandoPedido, setGuardandoPedido] = useState(false);
+  const [errorGuardado, setErrorGuardado]     = useState('');
+
+  // Bloquear el scroll del fondo (menú) mientras el checkout está abierto
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = original; };
+  }, []);
 
   useEffect(() => {
     setAvisando(hayAvisoAperturaGuardado());
@@ -139,37 +150,59 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
   async function confirmarPedido() {
     if (!validarPago()) return;
 
+    setGuardandoPedido(true);
+    setErrorGuardado('');
+
     const { supabase } = await import('../../lib/supabaseClient');
 
-    const { data: pedido, error } = await supabase.from('pedidos').insert({
-      cliente_nombre:   cliente.nombre,
-      cliente_telefono: cliente.telefono || null,
-      tipo_entrega:     tipoEntrega,
-      direccion:        tipoEntrega === 'delivery' ? direccion : null,
-      piso_depto:       tipoEntrega === 'delivery' ? pisoDepto : null,
-      indicaciones:     indicaciones || null,
-      latitud:          ubicacion?.lat || null,
-      longitud:         ubicacion?.lng || null,
-      metodo_pago:      metodoPago,
+    const payloadPedido = {
+      cliente_nombre:        cliente.nombre,
+      cliente_telefono:      cliente.telefono || null,
+      cliente_aclaraciones:  cliente.aclaraciones || null,
+      tipo_entrega:          tipoEntrega,
+      direccion:             tipoEntrega === 'delivery' ? direccion : null,
+      piso_depto:            tipoEntrega === 'delivery' ? pisoDepto : null,
+      indicaciones:          indicaciones || null,
+      latitud:               tipoEntrega === 'delivery' ? (ubicacion?.lat || null) : null,
+      longitud:              tipoEntrega === 'delivery' ? (ubicacion?.lng || null) : null,
+      metodo_pago:           metodoPago,
       subtotal,
-      costo_delivery:   costoDelivery,
+      costo_delivery:        costoDelivery,
       total,
-      estado:           'nuevo',
-    }).select().single();
+      estado:                'nuevo',
+      horario_deseado:       horarioDeseado,
+      hora_personalizada:    horarioDeseado === 'personalizado' ? horaPersonalizada : null,
+    };
 
-    if (!error && pedido) {
-      await supabase.from('pedido_items').insert(
-        items.map(it => ({
-          pedido_id:        pedido.id,
-          producto_id:      it.tipo === 'producto' ? it.id : null,
-          promocion_id:     it.tipo === 'promo' ? it.id : null,
-          variante_id:      it.variante_id || null,
-          nombre_snapshot:  it.nombre_snapshot,
-          precio_unitario:  it.precio,
-          cantidad:         it.cantidad,
-          detalle_seleccion: it.detalle_seleccion || null,
-        }))
-      );
+    const { data: pedido, error: errorPedido } = await supabase
+      .from('pedidos')
+      .insert(payloadPedido)
+      .select()
+      .single();
+
+    if (errorPedido || !pedido) {
+      console.error('Error guardando el pedido:', errorPedido);
+      setErrorGuardado('No pudimos guardar tu pedido. Revisá tu conexión e intentá de nuevo.');
+      setGuardandoPedido(false);
+      return;
+    }
+
+    const { error: errorItems } = await supabase.from('pedido_items').insert(
+      items.map(it => ({
+        pedido_id:         pedido.id,
+        producto_id:       it.tipo === 'producto' ? it.id : null,
+        promocion_id:      it.tipo === 'promo' ? it.id : null,
+        variante_id:       it.variante_id || null,
+        nombre_snapshot:   it.nombre_snapshot,
+        precio_unitario:   it.precio,
+        cantidad:          it.cantidad,
+        detalle_seleccion: it.detalle_seleccion || null,
+      }))
+    );
+
+    if (errorItems) {
+      console.error('Error guardando los items del pedido:', errorItems);
+      setErrorGuardado('Tu pedido se guardó pero hubo un problema con el detalle. Igual te mandamos el WhatsApp.');
     }
 
     const mensaje = generarMensajeWhatsApp({
@@ -185,9 +218,12 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
       indicaciones,
       lat: ubicacion?.lat,
       lng: ubicacion?.lng,
+      horarioDeseado,
+      horaPersonalizada,
     });
 
     abrirWhatsApp(config.whatsapp_numero, mensaje);
+    setGuardandoPedido(false);
     vaciar();
     onClose();
   }
@@ -409,9 +445,52 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
                 <textarea rows={3} value={cliente.aclaraciones} onChange={e => setCliente(p => ({ ...p, aclaraciones: e.target.value }))} placeholder="Sin cebolla, extra salsa, alergia a…" />
               </label>
               <label className="ch-campo">
-                <span>Indicaciones de la dirección (opcional)</span>
-                <textarea rows={2} value={indicaciones} onChange={e => setIndicaciones(e.target.value)} placeholder="Timbre roto, portón verde…" />
+                <span>{tipoEntrega === 'delivery' ? 'Indicaciones de la dirección (opcional)' : 'Indicaciones adicionales (opcional)'}</span>
+                <textarea
+                  rows={2}
+                  value={indicaciones}
+                  onChange={e => setIndicaciones(e.target.value)}
+                  placeholder={tipoEntrega === 'delivery' ? 'Timbre roto, portón verde…' : 'Aviso cuando llego, voy en moto…'}
+                />
               </label>
+
+              <div className="ch-campo">
+                <span>¿Para cuándo lo querés?</span>
+                <div className="ch-horario-opciones">
+                  <button
+                    type="button"
+                    className={`ch-horario-btn ${horarioDeseado === 'antes_posible' ? 'activo' : ''}`}
+                    onClick={() => setHorarioDeseado('antes_posible')}
+                  >
+                    Lo antes posible
+                  </button>
+                  <button
+                    type="button"
+                    className={`ch-horario-btn ${horarioDeseado === 'sin_apuro' ? 'activo' : ''}`}
+                    onClick={() => setHorarioDeseado('sin_apuro')}
+                  >
+                    Sin apuro
+                  </button>
+                  <button
+                    type="button"
+                    className={`ch-horario-btn ${horarioDeseado === 'personalizado' ? 'activo' : ''}`}
+                    onClick={() => setHorarioDeseado('personalizado')}
+                  >
+                    Elegir horario
+                  </button>
+                </div>
+                {horarioDeseado === 'personalizado' && (
+                  <input
+                    type="time"
+                    className="ch-hora-input"
+                    value={horaPersonalizada}
+                    onChange={e => setHoraPersonalizada(e.target.value)}
+                  />
+                )}
+                <p className="ch-horario-hint">
+                  Es una preferencia — te confirmamos el horario real por WhatsApp apenas tomamos tu pedido.
+                </p>
+              </div>
             </div>
           )}
 
@@ -477,10 +556,19 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
                 )}
               </div>
             ) : (
-              <button className="ch-btn-whatsapp" onClick={confirmarPedido}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Confirmar por WhatsApp
-              </button>
+              <>
+                <button className="ch-btn-whatsapp" onClick={confirmarPedido} disabled={guardandoPedido}>
+                  {guardandoPedido ? (
+                    <span className="ch-btn-loading"><span className="ch-spinner-blanco" /> Guardando pedido…</span>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                      Confirmar por WhatsApp
+                    </>
+                  )}
+                </button>
+                {errorGuardado && <p className="ch-err ch-err-guardado">{errorGuardado}</p>}
+              </>
             )
           )}
         </div>
@@ -557,6 +645,25 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
         .ch-btn-primario:hover { filter: brightness(1.15); }
         .ch-btn-primario:disabled { opacity: 0.4; cursor: default; }
         .ch-btn-whatsapp { width: 100%; background: #25d366; color: #fff; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .ch-btn-whatsapp:disabled { opacity: 0.7; cursor: default; }
+        .ch-btn-loading { display: flex; align-items: center; gap: 10px; }
+        .ch-spinner-blanco { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: chspin 0.7s linear infinite; display: inline-block; }
+        @keyframes chspin { to { transform: rotate(360deg); } }
+        .ch-err-guardado { text-align: center; margin-top: 8px; }
+
+        .ch-horario-opciones { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ch-horario-btn {
+          flex: 1; min-width: 90px; background: #fff; border: 1.5px solid #e4ddd3; color: #55504a;
+          border-radius: 10px; padding: 10px 8px; font-size: 12.5px; font-weight: 600; font-family: inherit;
+          cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s;
+        }
+        .ch-horario-btn.activo { border-color: #e23e45; background: #fff5f3; color: #e23e45; }
+        .ch-hora-input {
+          margin-top: 8px; width: 100%; background: #fff; border: 1.5px solid #e4ddd3; border-radius: 10px;
+          padding: 11px 12px; font-size: 15px; color: #22201c; font-family: inherit; outline: none;
+        }
+        .ch-hora-input:focus { border-color: #e23e45; }
+        .ch-horario-hint { font-size: 11.5px; color: #9a8f82; margin-top: 6px; line-height: 1.4; }
         .ch-btn-whatsapp:hover { filter: brightness(1.1); }
 
         .ch-aviso-cerrado {

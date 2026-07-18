@@ -44,6 +44,15 @@ function horaCorta(fechaStr) {
   return new Date(fechaStr).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function textoHorarioDeseado(pedido) {
+  if (!pedido.horario_deseado) return null;
+  if (pedido.horario_deseado === 'personalizado') {
+    return pedido.hora_personalizada ? `Horario pedido: ${pedido.hora_personalizada.slice(0, 5)}` : 'Horario personalizado';
+  }
+  if (pedido.horario_deseado === 'sin_apuro') return 'Sin apuro';
+  return 'Lo antes posible';
+}
+
 function colorEstado(estado) {
   return COLUMNAS_KANBAN.find(c => c.id === estado)?.color || '#a69c8d';
 }
@@ -115,10 +124,19 @@ function TarjetaKanban({ pedido, onAvanzar, puedeEditar }) {
               ))}
             </div>
           )}
+          {pedido.cliente_aclaraciones && (
+            <p className="det-row"><span className="det-lbl">Aclaraciones</span>{pedido.cliente_aclaraciones}</p>
+          )}
           <p className="det-row det-total"><span className="det-lbl">Total</span>${pedido.total}</p>
           <p className="det-row"><span className="det-lbl">Pago</span>{pedido.metodo_pago}</p>
+          {textoHorarioDeseado(pedido) && (
+            <p className="det-row det-horario"><span className="det-lbl">Horario</span>{textoHorarioDeseado(pedido)}</p>
+          )}
           {pedido.tipo_entrega === 'delivery' && pedido.direccion && (
             <p className="det-row"><span className="det-lbl">Dirección</span>{pedido.direccion} {pedido.piso_depto}</p>
+          )}
+          {pedido.indicaciones && (
+            <p className="det-row"><span className="det-lbl">Indicaciones</span>{pedido.indicaciones}</p>
           )}
           {pedido.latitud && (
             <a className="det-maps" href={`https://maps.google.com/?q=${pedido.latitud},${pedido.longitud}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
@@ -182,11 +200,25 @@ function Drawer({ pedido, onClose, onAvanzar, puedeEditar }) {
           </span>
         </div>
 
+        {textoHorarioDeseado(pedido) && (
+          <div className="drawer-horario-banner">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {textoHorarioDeseado(pedido)}
+          </div>
+        )}
+
         <div className="drawer-scroll">
           {pedido.cliente_nombre && (
             <div className="drawer-bloque">
               <span className="drawer-lbl">Cliente</span>
               <span className="drawer-val">{pedido.cliente_nombre}</span>
+            </div>
+          )}
+
+          {pedido.cliente_aclaraciones && (
+            <div className="drawer-bloque">
+              <span className="drawer-lbl">Aclaraciones del pedido</span>
+              <span className="drawer-val">{pedido.cliente_aclaraciones}</span>
             </div>
           )}
 
@@ -516,6 +548,7 @@ export default function PedidosPage() {
         .drawer-hora { font-size: 14px; color: #b0a898; }
         .drawer-close { background: #f0ebe3; border: 1px solid #e4ddd3; color: #9a8f82; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
         .drawer-estado-row { display: flex; align-items: center; gap: 8px; padding: 0 20px 14px; border-bottom: 1px solid #ede8e0; flex-shrink: 0; }
+        .drawer-horario-banner { display: flex; align-items: center; gap: 8px; margin: 12px 20px 0; background: #fff5f3; border: 1px solid #fcd0c8; color: #e23e45; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
         .drawer-estado-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .drawer-estado-label { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; flex: 1; }
         .drawer-timer { font-size: 13px; font-weight: 600; }
@@ -566,6 +599,7 @@ export default function PedidosPage() {
         .det-row { display: flex; gap: 8px; font-size: 12px; margin: 0; }
         .det-lbl { color: #b0a898; min-width: 60px; font-size: 11px; }
         .det-total { font-weight: 700; font-size: 14px; color: #1a1510; }
+        .det-horario { color: #e23e45; font-weight: 600; }
         .det-items { display: flex; flex-direction: column; gap: 3px; }
         .det-item { display: flex; gap: 6px; font-size: 12px; }
         .det-cant { color: #a69c8d; font-weight: 600; min-width: 18px; }
