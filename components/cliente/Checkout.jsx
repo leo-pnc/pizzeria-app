@@ -500,7 +500,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
         .ch-step { display: flex; align-items: center; gap: 6px; flex: 1; }
         .ch-step:not(:last-child)::after { content: ''; flex: 1; height: 1px; background: #ddd8d0; margin: 0 6px; }
         .ch-step-dot { width: 22px; height: 22px; border-radius: 50%; background: #ddd8d0; color: #9a8f82; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .ch-step-done .ch-step-dot { background: #a32424; color: #fff; }
+        .ch-step-done .ch-step-dot { background: #e23e45; color: #fff; }
         .ch-step-label { font-size: 11px; color: #9a8f82; white-space: nowrap; }
         .ch-step-done .ch-step-label { color: #1a1510; font-weight: 500; }
         .ch-body { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
@@ -511,14 +511,14 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
         .ch-item-nombre { font-size: 14px; font-weight: 500; display: block; color: #1a1510; }
         .ch-item-precio { font-size: 13px; color: #6b6259; display: block; margin-top: 2px; }
         .ch-item-ctrl { display: flex; align-items: center; gap: 8px; }
-        .ch-ctrl { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #a32424; background: transparent; color: #a32424; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .ch-ctrl { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #e23e45; background: transparent; color: #e23e45; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .ch-ctrl-cant { font-size: 15px; font-weight: 700; min-width: 18px; text-align: center; color: #1a1510; }
         .ch-subtotal { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 4px; border-top: 1px solid #ede8e0; margin-top: 4px; color: #1a1510; }
         .ch-opciones-entrega { display: flex; flex-direction: column; gap: 10px; }
         .ch-opcion-entrega { display: flex; align-items: center; gap: 14px; background: #fff; border: 2px solid #ede8e0; border-radius: 12px; padding: 14px 16px; cursor: pointer; font-family: inherit; text-align: left; transition: border-color 0.15s; }
-        .ch-opcion-entrega.activa { border-color: #a32424; background: #fff8f5; }
+        .ch-opcion-entrega.activa { border-color: #e23e45; background: #fff8f5; }
         .ch-opcion-icon { color: #9a8f82; flex-shrink: 0; }
-        .ch-opcion-entrega.activa .ch-opcion-icon { color: #a32424; }
+        .ch-opcion-entrega.activa .ch-opcion-icon { color: #e23e45; }
         .ch-opcion-titulo { font-size: 15px; font-weight: 600; color: #1a1510; display: block; }
         .ch-opcion-sub { font-size: 12px; color: #9a8f82; display: block; margin-top: 2px; }
         .ch-delivery-bloque { display: flex; flex-direction: column; gap: 12px; }
@@ -534,21 +534,21 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
         .ch-btn-ubic { background: #1a1510; color: #faf7f2; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .ch-btn-ubic:disabled { opacity: 0.6; cursor: default; }
         .ch-btn-mapa { display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border: 1.5px solid #e4ddd3; color: #1a1510; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; transition: border-color 0.15s; }
-        .ch-btn-mapa:hover { border-color: #a32424; }
+        .ch-btn-mapa:hover { border-color: #e23e45; }
         .ch-mapa-wrap { display: flex; flex-direction: column; gap: 10px; }
         .ch-mapa-intro { font-size: 13px; color: #9a8f82; margin: 0; line-height: 1.5; }
         .ch-error-ubic { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-        .ch-error-titulo { font-size: 13px; font-weight: 600; color: #a32424; margin: 0; line-height: 1.4; }
+        .ch-error-titulo { font-size: 13px; font-weight: 600; color: #e23e45; margin: 0; line-height: 1.4; }
         .ch-error-pasos { font-size: 13px; color: #6b6259; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
         .ch-error-btns { display: flex; flex-direction: column; gap: 8px; }
         .ch-btn-retiro { background: transparent; border: 1px solid #e4ddd3; color: #6b6259; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: inherit; cursor: pointer; }
         .ch-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6b6259; font-weight: 500; }
         .ch-campo input, .ch-campo textarea { background: #fff; border: 1.5px solid #ddd8d0; border-radius: 10px; padding: 12px; font-size: 15px; color: #1a1510; font-family: inherit; outline: none; transition: border-color 0.15s; resize: none; }
-        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #a32424; }
-        .ch-err { font-size: 12px; color: #a32424; }
+        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #e23e45; }
+        .ch-err { font-size: 12px; color: #e23e45; }
         .ch-metodos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .ch-metodo { background: #fff; border: 2px solid #ede8e0; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; transition: border-color 0.15s; color: #1a1510; }
-        .ch-metodo.activo { border-color: #a32424; background: #fff8f5; color: #a32424; font-weight: 600; }
+        .ch-metodo.activo { border-color: #e23e45; background: #fff8f5; color: #e23e45; font-weight: 600; }
         .ch-resumen { background: #fff; border: 1px solid #ede8e0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
         .ch-resumen-row { display: flex; justify-content: space-between; font-size: 14px; color: #6b6259; }
         .ch-resumen-total { font-size: 18px; font-weight: 700; color: #1a1510; padding-top: 8px; border-top: 1px solid #ede8e0; margin-top: 4px; }
@@ -567,7 +567,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
           border: 1px solid #fcd0c8;
           border-radius: 12px;
           padding: 12px 14px;
-          color: #a32424;
+          color: #e23e45;
         }
         .ch-aviso-cerrado svg { flex-shrink: 0; margin-top: 1px; }
         .ch-aviso-cerrado div { display: flex; flex-direction: column; gap: 2px; }

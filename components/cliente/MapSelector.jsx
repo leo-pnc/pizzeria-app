@@ -63,8 +63,8 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
       // Círculo de cobertura — guardado en ref para poder moverlo después
       const circle = L.circle([latInicial, lngInicial], {
         radius: (radioKm || 5) * 1000,
-        color: '#a32424',
-        fillColor: '#a32424',
+        color: '#e23e45',
+        fillColor: '#e23e45',
         fillOpacity: 0.05,
         weight: 1.5,
         dashArray: '6 5',
@@ -73,7 +73,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
       // Pin del local — guardado en ref para poder moverlo después
       const markerLocal = L.marker([latInicial, lngInicial], {
         icon: L.divIcon({
-          html: `<div style="width:12px;height:12px;background:#a32424;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`,
+          html: `<div style="width:12px;height:12px;background:#e23e45;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`,
           className: '',
           iconAnchor: [6, 6],
         }),
@@ -196,12 +196,12 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         .leyenda { display: flex; gap: 16px; font-size: 12px; color: #9a8f82; }
         .leg { display: flex; align-items: center; gap: 5px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .dot-r { background: #a32424; }
+        .dot-r { background: #e23e45; }
         .dot-n { background: #1a1510; }
 
         .fuera-zona {
           background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 10px;
-          padding: 10px 14px; font-size: 13px; color: #a32424; font-weight: 500;
+          padding: 10px 14px; font-size: 13px; color: #e23e45; font-weight: 500;
         }
 
         .acciones { display: flex; gap: 8px; }
@@ -211,7 +211,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
           color: #6b6259; border-radius: 10px; padding: 13px; font-size: 14px;
           font-family: inherit; cursor: pointer; transition: border-color 0.15s;
         }
-        .btn-cancel:hover { border-color: #a32424; }
+        .btn-cancel:hover { border-color: #e23e45; }
 
         .btn-ok {
           flex: 2; background: #1a1510; color: #faf7f2; border: none;

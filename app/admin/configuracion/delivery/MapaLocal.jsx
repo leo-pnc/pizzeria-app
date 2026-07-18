@@ -47,8 +47,8 @@ export default function MapaLocal({ lat, lng, radioKm, onUbicar }) {
       // Círculo de cobertura, se actualiza cuando cambia el radio
       const circle = L.circle([latInicial, lngInicial], {
         radius: (radioKm || 5) * 1000,
-        color: '#a32424',
-        fillColor: '#a32424',
+        color: '#e23e45',
+        fillColor: '#e23e45',
         fillOpacity: 0.05,
         weight: 1.5,
         dashArray: '6 5',
@@ -57,7 +57,7 @@ export default function MapaLocal({ lat, lng, radioKm, onUbicar }) {
       // Pin del local — gota roja draggable
       const iconLocal = L.divIcon({
         html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:grab">
-          <div style="width:26px;height:26px;background:#a32424;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
+          <div style="width:26px;height:26px;background:#e23e45;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
         </div>`,
         className: '',
         iconAnchor: [13, 26],
@@ -148,7 +148,7 @@ export default function MapaLocal({ lat, lng, radioKm, onUbicar }) {
           flex: 1; background: #f7f5f2; border: 1px solid #ede8e0; border-radius: 8px;
           padding: 9px 12px; font-size: 13px; color: #1a1510; font-family: inherit; outline: none;
         }
-        .buscador input:focus { border-color: #a32424; }
+        .buscador input:focus { border-color: #e23e45; }
         .buscador button {
           background: #1a1510; color: #fff; border: none; border-radius: 8px;
           padding: 9px 16px; font-size: 13px; font-family: inherit; cursor: pointer;
