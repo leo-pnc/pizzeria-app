@@ -36,6 +36,22 @@ const SECCIONES = [
     bg: 'rgba(176,125,42,0.08)',
   },
   {
+    id: 'galeria',
+    titulo: 'Galería',
+    descripcion: 'Fotos de preparación y el negocio',
+    href: '/admin/galeria',
+    icono: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <path d="M21 15l-5-5L5 21"/>
+      </svg>
+    ),
+    color: '#8a5fb0',
+    bg: 'rgba(138,95,176,0.08)',
+    permisoDe: 'catalogo',
+  },
+  {
     id: 'configuracion',
     titulo: 'Configuración',
     descripcion: 'Horarios, delivery y pagos',
@@ -63,7 +79,7 @@ export default function AdminDashboard() {
       .then(({ data }) => { if (data) setEstadoLocal(data.esta_abierto_manual); });
   }, []);
 
-  const seccionesVisibles = SECCIONES.filter(s => esDueño || puede(s.id, 'ver'));
+  const seccionesVisibles = SECCIONES.filter(s => esDueño || puede(s.permisoDe || s.id, 'ver'));
 
   const hora = new Date().getHours();
   const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';

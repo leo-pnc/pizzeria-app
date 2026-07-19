@@ -28,6 +28,8 @@ export default function MenuPage() {
   const [busqueda, setBusqueda]           = useState('');
   const [showCheckout, setShowCheckout]   = useState(false);
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
+  const [galeria, setGaleria]             = useState([]);
+  const [lightboxIdx, setLightboxIdx]     = useState(null);
 
   const navRef      = useRef(null);
 
@@ -76,7 +78,7 @@ export default function MenuPage() {
     const [
       { data: cfg }, { data: cats }, { data: prods }, { data: vars },
       { data: promos }, { data: promoItems }, { data: mets },
-      { data: horarios }, { data: franjas },
+      { data: horarios }, { data: franjas }, { data: fotos },
     ] = await Promise.all([
       supabase.from('local_config').select('*').single(),
       supabase.from('categorias').select('*').eq('activa', true).order('orden'),
@@ -87,6 +89,7 @@ export default function MenuPage() {
       supabase.from('metodos_pago').select('*').eq('activo', true).order('orden'),
       supabase.from('horarios').select('*'),
       supabase.from('horario_franjas').select('*'),
+      supabase.from('galeria_fotos').select('*').order('created_at', { ascending: false }),
     ]);
 
     if (cfg && horarios && franjas) {
@@ -104,6 +107,7 @@ export default function MenuPage() {
       setPromociones(promos.map(pr => ({ ...pr, items: promoItems.filter(i => i.promocion_id === pr.id) })));
     }
     if (mets) setMetodos(mets);
+    if (fotos) setGaleria(fotos);
   }
 
   function seleccionarCategoria(catId) {
@@ -399,6 +403,103 @@ export default function MenuPage() {
         )}
       </main>
 
+      {/* ── GALERÍA ── */}
+      {galeria.length > 0 && (
+        <section className="galeria-seccion">
+          <div className="galeria-inner">
+            <h2 className="galeria-titulo">
+              <span className="titulo-bar" />
+              Nuestra cocina
+            </h2>
+            <div className="galeria-scroll">
+              {galeria.map((foto, idx) => (
+                <button key={foto.id} className="galeria-thumb" onClick={() => setLightboxIdx(idx)}>
+                  <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── FOOTER ── */}
+      <footer className="footer">
+        <div className="footer-inner">
+          <div className="footer-marca">
+            <img src="/logo.png" alt="Don Adriano's" className="footer-logo" />
+            <div>
+              <h3>Don Adriano's</h3>
+              <p>Pizzería · San José, Guaymallén, Mendoza</p>
+            </div>
+          </div>
+
+          <div className="footer-columnas">
+            <div className="footer-col">
+              <h4>Contacto</h4>
+              {config?.whatsapp_numero && (
+                <a href={`https://wa.me/${config.whatsapp_numero}`} target="_blank" rel="noopener noreferrer">
+                  WhatsApp
+                </a>
+              )}
+              <button className="footer-link-btn" onClick={() => setModalHorarios(true)}>Horarios</button>
+              {config?.latitud_local && (
+                <a href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                  Cómo llegar
+                </a>
+              )}
+            </div>
+
+            {(config?.instagram_url || config?.facebook_url) && (
+              <div className="footer-col">
+                <h4>Seguinos</h4>
+                <div className="footer-redes">
+                  {config.instagram_url && (
+                    <a href={config.instagram_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-ig" aria-label="Instagram">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                    </a>
+                  )}
+                  {config.facebook_url && (
+                    <a href={config.facebook_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-fb" aria-label="Facebook">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          © {new Date().getFullYear()} Don Adriano's · Todos los derechos reservados
+        </div>
+      </footer>
+
+      {/* ── LIGHTBOX DE GALERÍA ── */}
+      {lightboxIdx !== null && (
+        <div className="lightbox-backdrop" onClick={() => setLightboxIdx(null)}>
+          <button className="lightbox-close" onClick={() => setLightboxIdx(null)}>✕</button>
+
+          {lightboxIdx > 0 && (
+            <button className="lightbox-nav lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i - 1); }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+          )}
+
+          <div className="lightbox-contenido" onClick={e => e.stopPropagation()}>
+            <img src={galeria[lightboxIdx].imagen_url} alt={galeria[lightboxIdx].descripcion || ''} />
+            {galeria[lightboxIdx].descripcion && (
+              <p className="lightbox-desc">{galeria[lightboxIdx].descripcion}</p>
+            )}
+          </div>
+
+          {lightboxIdx < galeria.length - 1 && (
+            <button className="lightbox-nav lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i + 1); }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── MODAL DE HORARIOS ── */}
       {modalHorarios && (
         <div className="modal-horarios-backdrop" onClick={() => setModalHorarios(false)}>
@@ -669,6 +770,45 @@ export default function MenuPage() {
         .btn-red:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 18px rgba(0,0,0,0.24); }
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
+
+        /* ── GALERÍA ── */
+        .galeria-seccion { background: #fff; border-top: 1px solid #ece6dc; padding: 28px 0; margin-top: 24px; }
+        .galeria-inner { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .galeria-scroll { display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+        .galeria-scroll::-webkit-scrollbar { height: 4px; }
+        .galeria-scroll::-webkit-scrollbar-thumb { background: #ece6dc; border-radius: 4px; }
+        .galeria-thumb { flex-shrink: 0; width: 110px; height: 110px; border-radius: 12px; overflow: hidden; border: none; padding: 0; cursor: pointer; background: #f3efe6; }
+        .galeria-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
+        .galeria-thumb:hover img { transform: scale(1.05); }
+
+        /* ── FOOTER ── */
+        .footer { background: #22201c; color: #d8d2c8; margin-top: 0; }
+        .footer-inner { max-width: 760px; margin: 0 auto; padding: 32px 16px 24px; display: flex; flex-direction: column; gap: 24px; }
+        .footer-marca { display: flex; align-items: center; gap: 12px; }
+        .footer-logo { width: 44px; height: 44px; border-radius: 50%; object-fit: contain; background: #fff; flex-shrink: 0; }
+        .footer-marca h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #fff; margin: 0; }
+        .footer-marca p { font-size: 12px; color: #a39c8f; margin: 2px 0 0; }
+        .footer-columnas { display: flex; gap: 40px; flex-wrap: wrap; }
+        .footer-col { display: flex; flex-direction: column; gap: 8px; }
+        .footer-col h4 { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #a39c8f; margin: 0 0 4px; }
+        .footer-col a, .footer-link-btn { font-size: 13.5px; color: #d8d2c8; text-decoration: none; background: none; border: none; padding: 0; text-align: left; cursor: pointer; font-family: inherit; width: fit-content; }
+        .footer-col a:hover, .footer-link-btn:hover { color: #fff; text-decoration: underline; }
+        .footer-redes { display: flex; gap: 8px; }
+        .footer-red { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .footer-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
+        .footer-red-fb { background: #1877f2; }
+        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; text-align: center; font-size: 11.5px; color: #8a8378; }
+
+        /* ── LIGHTBOX ── */
+        .lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .lightbox-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 16px; cursor: pointer; z-index: 2; }
+        .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
+        .lightbox-prev { left: 16px; }
+        .lightbox-next { right: 16px; }
+        .lightbox-contenido { max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .lightbox-contenido img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
+        .lightbox-desc { color: #fff; font-size: 13px; text-align: center; max-width: 400px; }
 
         @media (max-width: 380px) {
           .header-sub { display: none; }
