@@ -29,7 +29,6 @@ export default function MenuPage() {
   const [showCheckout, setShowCheckout]   = useState(false);
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
 
-  const seccionRefs = useRef({});
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
@@ -97,7 +96,7 @@ export default function MenuPage() {
       setAbierto(estaAbierto);
       setProxApertura(estaAbierto ? null : proximaApertura(horarios, franjas));
     }
-    if (cats) { setCategorias(cats); setCatActiva(cats[0]?.id ?? null); }
+    if (cats) { setCategorias(cats); setCatActiva('__todo__'); }
     if (prods && vars) {
       setProductos(prods.map(p => ({ ...p, variantes: vars.filter(v => v.producto_id === p.id) })));
     }
@@ -107,20 +106,9 @@ export default function MenuPage() {
     if (mets) setMetodos(mets);
   }
 
-  useEffect(() => {
-    const els = Object.values(seccionRefs.current).filter(Boolean);
-    if (!els.length) return;
-    const obs = new IntersectionObserver(
-      entries => { entries.forEach(e => { if (e.isIntersecting) setCatActiva(e.target.dataset.catId); }); },
-      { rootMargin: '-20% 0px -70% 0px' }
-    );
-    els.forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, [categorias, promociones]);
-
-  function scrollA(catId) {
+  function seleccionarCategoria(catId) {
     setCatActiva(catId);
-    seccionRefs.current[catId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const busqLower = busqueda.toLowerCase().trim();
@@ -278,9 +266,11 @@ export default function MenuPage() {
     );
   }
 
-  const todasCats = promociones.length > 0
-    ? [{ id: '__promos__', nombre: 'Promociones' }, ...categorias]
-    : categorias;
+  const todasCats = [
+    { id: '__todo__', nombre: 'Todo' },
+    ...(promociones.length > 0 ? [{ id: '__promos__', nombre: 'Promociones' }] : []),
+    ...categorias,
+  ];
 
   return (
     <div className="pagina">
@@ -342,7 +332,7 @@ export default function MenuPage() {
         <nav className="cat-nav">
           <div className="cat-nav-inner">
             {todasCats.map(cat => (
-              <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => scrollA(cat.id)}>
+              <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
                 {cat.nombre}
               </button>
             ))}
@@ -372,8 +362,9 @@ export default function MenuPage() {
 
         {!enBusqueda && (
           <>
-            {promociones.length > 0 && (
-              <section className="seccion" data-cat-id="__promos__" ref={el => { seccionRefs.current['__promos__'] = el; }}>
+            {/* Promociones: se muestran si estamos en "Todo" o en "Promociones" */}
+            {promociones.length > 0 && (categoriaActiva === '__todo__' || categoriaActiva === '__promos__') && (
+              <section className="seccion">
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-verde" />Promociones</h2>
                 <div className="grilla">
                   {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
@@ -381,18 +372,29 @@ export default function MenuPage() {
               </section>
             )}
 
-            {categorias.map(cat => {
-              const prods = productos.filter(p => p.categoria_id === cat.id);
-              if (!prods.length) return null;
-              return (
-                <section key={cat.id} className="seccion" data-cat-id={cat.id} ref={el => { seccionRefs.current[cat.id] = el; }}>
-                  <h2 className="seccion-titulo"><span className="titulo-bar" />{cat.nombre}</h2>
-                  <div className="grilla">
-                    {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
-                  </div>
-                </section>
-              );
-            })}
+            {/* Categorías: en "Todo" se muestran todas, si no, solo la seleccionada */}
+            {categorias
+              .filter(cat => categoriaActiva === '__todo__' || categoriaActiva === cat.id)
+              .map(cat => {
+                const prods = productos.filter(p => p.categoria_id === cat.id);
+                if (!prods.length) return null;
+                return (
+                  <section key={cat.id} className="seccion">
+                    <h2 className="seccion-titulo"><span className="titulo-bar" />{cat.nombre}</h2>
+                    <div className="grilla">
+                      {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
+                    </div>
+                  </section>
+                );
+              })}
+
+            {/* Categoría específica sin productos */}
+            {categoriaActiva !== '__todo__' && categoriaActiva !== '__promos__' &&
+              productos.filter(p => p.categoria_id === categoriaActiva).length === 0 && (
+                <div className="seccion-vacia">
+                  <p>No hay productos cargados en esta categoría todavía.</p>
+                </div>
+            )}
           </>
         )}
       </main>
@@ -614,6 +616,7 @@ export default function MenuPage() {
         .busq-total { padding: 0 4px 12px; font-size: 13px; color: #8a8378; }
         .busq-total strong { color: #22201c; }
         .sin-resultados { padding: 48px 24px; text-align: center; color: #8a8378; font-size: 15px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+        .seccion-vacia { padding: 40px 20px; text-align: center; color: #8a8378; font-size: 14px; }
         .sin-resultados strong { color: #22201c; }
         .sin-resultados button { background: #22201c; color: #fffbf5; border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-family: inherit; cursor: pointer; }
 
