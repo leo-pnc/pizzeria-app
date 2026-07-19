@@ -415,7 +415,7 @@ export default function MenuPage() {
           <div className="galeria-scroll">
             <div
               className="galeria-track"
-              style={{ animationDuration: `${Math.max(galeria.length * 4, 18)}s` }}
+              style={{ animationDuration: `${Math.max(galeria.length * 6.5, 24)}s` }}
             >
               {/* Duplicamos la lista para que la cinta sea continua sin cortes */}
               {[...galeria, ...galeria].map((foto, idx) => (
@@ -794,7 +794,7 @@ export default function MenuPage() {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
-        .galeria-thumb { flex-shrink: 0; width: 110px; height: 110px; border-radius: 12px; overflow: hidden; border: none; padding: 0; cursor: pointer; background: #f3efe6; }
+        .galeria-thumb { flex-shrink: 0; width: 190px; height: 190px; border-radius: 14px; overflow: hidden; border: none; padding: 0; cursor: pointer; background: #f3efe6; }
         .galeria-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; pointer-events: none; }
         .galeria-thumb:hover img { transform: scale(1.06); }
 
