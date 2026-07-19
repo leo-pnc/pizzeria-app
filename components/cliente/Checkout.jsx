@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useCarrito } from '../../contexts/CarritoContext';
 import {
   obtenerUbicacion, distanciaKm, generarMensajeWhatsApp, abrirWhatsApp,
   guardarAvisoApertura, cancelarAvisoApertura, hayAvisoAperturaGuardado,
   pedirPermisoNotificaciones,
+  guardarBorradorCheckout, cargarBorradorCheckout, limpiarBorradorCheckout,
 } from '../../lib/clienteUtils';
 
 const MapSelector = dynamic(() => import('./MapSelector'), {
@@ -38,6 +39,8 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
   const [horaPersonalizada, setHoraPersonalizada] = useState('');
   const [guardandoPedido, setGuardandoPedido] = useState(false);
   const [errorGuardado, setErrorGuardado]     = useState('');
+  const hidratado = useRef(false);
+  const [borradorRestaurado, setBorradorRestaurado] = useState(false);
 
   // Bloquear el scroll del fondo (menú) mientras el checkout está abierto
   useEffect(() => {
@@ -45,6 +48,36 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = original; };
   }, []);
+
+  // ── Cargar el borrador guardado al abrir el checkout (aunque el local
+  //    esté cerrado o el cliente haya cerrado la app a mitad de camino) ──────
+  useEffect(() => {
+    const borrador = cargarBorradorCheckout();
+    if (borrador) {
+      const tieneProgreso = borrador.paso !== 'carrito' || borrador.cliente?.nombre || borrador.direccion || borrador.metodoPago;
+      if (tieneProgreso) setBorradorRestaurado(true);
+      if (borrador.paso) setPaso(borrador.paso);
+      if (borrador.tipoEntrega) setTipoEntrega(borrador.tipoEntrega);
+      if (borrador.direccion) setDireccion(borrador.direccion);
+      if (borrador.pisoDepto) setPisoDepto(borrador.pisoDepto);
+      if (borrador.indicaciones) setIndicaciones(borrador.indicaciones);
+      if (borrador.cliente) setCliente(borrador.cliente);
+      if (borrador.metodoPago) setMetodoPago(borrador.metodoPago);
+      if (borrador.horarioDeseado) setHorarioDeseado(borrador.horarioDeseado);
+      if (borrador.horaPersonalizada) setHoraPersonalizada(borrador.horaPersonalizada);
+      if (borrador.ubicacion) setUbicacion(borrador.ubicacion);
+    }
+    hidratado.current = true;
+  }, []);
+
+  // ── Guardar el borrador automáticamente cada vez que algo cambia ───────────
+  useEffect(() => {
+    if (!hidratado.current) return; // evita pisar el borrador antes de cargarlo
+    guardarBorradorCheckout({
+      paso, tipoEntrega, direccion, pisoDepto, indicaciones,
+      cliente, metodoPago, horarioDeseado, horaPersonalizada, ubicacion,
+    });
+  }, [paso, tipoEntrega, direccion, pisoDepto, indicaciones, cliente, metodoPago, horarioDeseado, horaPersonalizada, ubicacion]);
 
   useEffect(() => {
     setAvisando(hayAvisoAperturaGuardado());
@@ -223,6 +256,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
     });
 
     abrirWhatsApp(config.whatsapp_numero, mensaje);
+    limpiarBorradorCheckout();
     setGuardandoPedido(false);
     vaciar();
     onClose();
@@ -251,6 +285,15 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
           </div>
           <button className="ch-close" onClick={onClose}>✕</button>
         </div>
+
+        {/* ── AVISO DE PROGRESO RESTAURADO ── */}
+        {borradorRestaurado && (
+          <div className="ch-aviso-restaurado">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <span>Retomamos tu pedido donde lo dejaste</span>
+            <button onClick={() => setBorradorRestaurado(false)}>✕</button>
+          </div>
+        )}
 
         {/* ── AVISO DE CERRADO (visible en cualquier paso) ── */}
         {abierto === false && (
@@ -665,6 +708,22 @@ export default function Checkout({ config, metodos, abierto, proxApertura, onClo
         .ch-hora-input:focus { border-color: #e23e45; }
         .ch-horario-hint { font-size: 11.5px; color: #9a8f82; margin-top: 6px; line-height: 1.4; }
         .ch-btn-whatsapp:hover { filter: brightness(1.1); }
+
+        .ch-aviso-restaurado {
+          margin: 12px 20px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #f3efe9;
+          border: 1px solid #e4ddd3;
+          border-radius: 12px;
+          padding: 10px 14px;
+          color: #6b6259;
+          font-size: 12.5px;
+        }
+        .ch-aviso-restaurado svg { flex-shrink: 0; color: #9a8f82; }
+        .ch-aviso-restaurado span { flex: 1; }
+        .ch-aviso-restaurado button { background: none; border: none; color: #9a8f82; cursor: pointer; font-size: 13px; padding: 2px; }
 
         .ch-aviso-cerrado {
           margin: 12px 20px 0;
