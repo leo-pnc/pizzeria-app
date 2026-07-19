@@ -6,6 +6,8 @@ import { useCarrito } from '../../../contexts/CarritoContext';
 import Checkout from '../../../components/cliente/Checkout';
 import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAvisoApertura, notificarAperturaSiCorresponde } from '../../../lib/clienteUtils';
 
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
 
@@ -18,6 +20,7 @@ export default function MenuPage() {
   const [proxApertura, setProxApertura]   = useState(null);
   const [toast, setToast]                 = useState(null);
   const [modalReapertura, setModalReapertura] = useState(false);
+  const [modalHorarios, setModalHorarios]     = useState(false);
   const horariosRef = useRef([]);
   const franjasRef  = useRef([]);
   const configRef   = useRef(null);
@@ -320,6 +323,9 @@ export default function MenuPage() {
             <span>
               {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
             </span>
+            <button className="btn-ver-horarios" onClick={() => setModalHorarios(true)}>
+              Ver horarios
+            </button>
           </div>
         )}
 
@@ -390,6 +396,59 @@ export default function MenuPage() {
           </>
         )}
       </main>
+
+      {/* ── MODAL DE HORARIOS ── */}
+      {modalHorarios && (
+        <div className="modal-horarios-backdrop" onClick={() => setModalHorarios(false)}>
+          <div className="modal-horarios" onClick={e => e.stopPropagation()}>
+            <div className="modal-horarios-header">
+              <h2>Horarios de atención</h2>
+              <button className="modal-horarios-close" onClick={() => setModalHorarios(false)}>✕</button>
+            </div>
+
+            <div className="modal-horarios-lista">
+              {DIAS_SEMANA.map((nombreDia, idx) => {
+                const horarioDia = horariosRef.current.find(h => h.dia_semana === idx);
+                const franjasDia = horarioDia
+                  ? franjasRef.current
+                      .filter(f => f.horario_id === horarioDia.id)
+                      .sort((a, b) => a.hora_apertura.localeCompare(b.hora_apertura))
+                  : [];
+                const esHoy = new Date().getDay() === idx;
+                const activo = horarioDia?.activo && franjasDia.length > 0;
+
+                return (
+                  <div key={idx} className={`horario-fila ${esHoy ? 'horario-hoy' : ''}`}>
+                    <span className="horario-dia">
+                      {nombreDia}
+                      {esHoy && <span className="horario-badge-hoy">Hoy</span>}
+                    </span>
+                    <span className={`horario-franjas ${!activo ? 'horario-cerrado' : ''}`}>
+                      {activo
+                        ? franjasDia.map((f, i) => (
+                            <span key={i}>
+                              {f.hora_apertura.slice(0, 5)} a {f.hora_cierre.slice(0, 5)}
+                              {i < franjasDia.length - 1 ? ' · ' : ''}
+                            </span>
+                          ))
+                        : 'Cerrado'
+                      }
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {config?.esta_abierto_manual !== null && (
+              <p className="modal-horarios-nota">
+                {config?.esta_abierto_manual
+                  ? 'Nota: el local está forzado a estar abierto en este momento, fuera de su horario habitual.'
+                  : 'Nota: el local está cerrado manualmente en este momento, aunque corresponda estar abierto según el horario.'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL DE REAPERTURA ── */}
       {modalReapertura && (
@@ -473,6 +532,19 @@ export default function MenuPage() {
         .cerrado { color: #e23e45; }
         .cerrado .estado-dot { background: #e23e45; }
 
+        .btn-ver-horarios {
+          margin-left: auto;
+          background: transparent;
+          border: none;
+          color: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          text-decoration: underline;
+          cursor: pointer;
+          padding: 2px 0;
+          flex-shrink: 0;
+        }
+
         /* ── BUSCADOR ── */
         .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; }
         .busq-inner { position: relative; }
@@ -546,6 +618,20 @@ export default function MenuPage() {
         .sin-resultados button { background: #22201c; color: #fffbf5; border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-family: inherit; cursor: pointer; }
 
         /* ── MODAL REAPERTURA ── */
+        .modal-horarios-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 70; padding: 20px; backdrop-filter: blur(2px); }
+        .modal-horarios { background: #fff; border-radius: 20px; padding: 24px; max-width: 380px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: modalIn 0.25s cubic-bezier(0.32,0.72,0,1); }
+        .modal-horarios-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .modal-horarios-header h2 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; margin: 0; }
+        .modal-horarios-close { background: #f3efe6; border: none; color: #8a8378; border-radius: 50%; width: 30px; height: 30px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
+        .modal-horarios-lista { display: flex; flex-direction: column; gap: 2px; }
+        .horario-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 8px; border-radius: 8px; }
+        .horario-hoy { background: #fff5f3; }
+        .horario-dia { font-size: 13.5px; font-weight: 600; color: #22201c; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .horario-badge-hoy { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #e23e45; color: #fff; border-radius: 10px; padding: 1px 6px; }
+        .horario-franjas { font-size: 13px; color: #55504a; text-align: right; }
+        .horario-cerrado { color: #b0a898; }
+        .modal-horarios-nota { font-size: 11.5px; color: #8a8378; line-height: 1.5; margin-top: 14px; padding-top: 14px; border-top: 1px solid #ece6dc; }
+
         .modal-reap-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 70; padding: 24px; backdrop-filter: blur(2px); }
         .modal-reap { background: #fff; border-radius: 20px; padding: 32px 28px; max-width: 340px; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.32,0.72,0,1); }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.92) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
