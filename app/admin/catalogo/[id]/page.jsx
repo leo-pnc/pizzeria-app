@@ -12,6 +12,7 @@ const ESTADO_INICIAL_PRODUCTO = {
   variantes: [],
   tieneVariantes: false,
   subiendoImagen: false,
+  esNuevo: false,
 };
 
 const ASPECT = 4 / 3; // ratio de las cards del menú (cambialo si querés cuadrado: 1/1)
@@ -99,6 +100,7 @@ export default function CategoriaProductosPage() {
       disponible: prod.disponible,
       tieneVariantes: prod.variantes.length > 0,
       variantes: prod.variantes.map((v) => ({ ...v })),
+      esNuevo: prod.es_nuevo || false,
     });
     setErrModal('');
     setModalProducto(prod);
@@ -209,6 +211,7 @@ export default function CategoriaProductosPage() {
       imagen_url: formProducto.imagen_url.trim() || null,
       disponible: formProducto.disponible,
       categoria_id: categoriaId,
+      es_nuevo: formProducto.esNuevo,
     };
 
     let productoId;
@@ -249,7 +252,12 @@ export default function CategoriaProductosPage() {
   }
 
   async function eliminarProducto(prod) {
-    await supabase.from('productos').delete().eq('id', prod.id);
+    const { error } = await supabase.from('productos').delete().eq('id', prod.id);
+    if (error) {
+      alert('No se pudo eliminar: ' + error.message);
+      setConfirmandoEliminar(null);
+      return;
+    }
     setConfirmandoEliminar(null);
     cargar();
   }
@@ -358,7 +366,12 @@ export default function CategoriaProductosPage() {
   }
 
   async function eliminarPromo(promo) {
-    await supabase.from('promociones').delete().eq('id', promo.id);
+    const { error } = await supabase.from('promociones').delete().eq('id', promo.id);
+    if (error) {
+      alert('No se pudo eliminar: ' + error.message);
+      setConfirmandoEliminar(null);
+      return;
+    }
     setConfirmandoEliminar(null);
     cargar();
   }
@@ -391,6 +404,7 @@ export default function CategoriaProductosPage() {
             <div key={prod.id} className={`fila-prod ${!prod.disponible ? 'sin-stock' : ''}`}>
               <div className="prod-info">
                 <span className="prod-nombre">{prod.nombre}</span>
+                {prod.es_nuevo && <span className="badge-nuevo">Nuevo</span>}
                 {prod.variantes.length > 0 ? (
                   <span className="prod-precio">
                     {prod.variantes.map((v) => `${v.nombre} $${v.precio}`).join(' · ')}
@@ -566,6 +580,11 @@ export default function CategoriaProductosPage() {
               Disponible (si está sin tilde = "Sin stock")
             </label>
 
+            <label className="check-campo check-nuevo">
+              <input type="checkbox" checked={formProducto.esNuevo} onChange={(e) => setFormProducto((p) => ({ ...p, esNuevo: e.target.checked }))} />
+              Marcar como "Nuevo" (aparece en la pestaña Nuevo del menú, con un distintivo)
+            </label>
+
             {errModal && <p className="aviso aviso-error">{errModal}</p>}
 
             <div className="modal-acciones">
@@ -717,6 +736,8 @@ export default function CategoriaProductosPage() {
         .fila-prod.sin-stock { opacity: 0.5; }
         .prod-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
         .prod-nombre { font-size: 15px; font-weight: 500; }
+        .badge-nuevo { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #3c8261; color: #fff; border-radius: 20px; padding: 2px 8px; }
+        .check-nuevo { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 8px; padding: 10px 12px; }
         .prod-precio { font-size: 13px; color: #9a8f82; }
         .badge-stock { font-size: 11px; background: rgba(226,87,76,0.15); color: #e2574c; border: 1px solid rgba(226,87,76,0.3); border-radius: 20px; padding: 2px 8px; width: fit-content; }
         .promo-items { display: flex; flex-wrap: wrap; gap: 4px; }

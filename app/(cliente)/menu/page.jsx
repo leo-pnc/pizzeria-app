@@ -156,6 +156,7 @@ export default function MenuPage() {
             : <div className="card-img-ph"><span>Sin foto</span></div>
           }
           {!disponible && <span className="card-badge-agotado">Sin stock</span>}
+          {disponible && prod.es_nuevo && <span className="card-badge-nuevo">Nuevo</span>}
         </div>
 
         <div className="card-body">
@@ -270,8 +271,11 @@ export default function MenuPage() {
     );
   }
 
+  const hayProductosNuevos = productos.some(p => p.es_nuevo);
+
   const todasCats = [
     { id: '__todo__', nombre: 'Todo' },
+    ...(hayProductosNuevos ? [{ id: '__nuevo__', nombre: 'Nuevo' }] : []),
     ...(promociones.length > 0 ? [{ id: '__promos__', nombre: 'Promociones' }] : []),
     ...categorias,
   ];
@@ -366,6 +370,16 @@ export default function MenuPage() {
 
         {!enBusqueda && (
           <>
+            {/* Nuevo: productos marcados como recién lanzados */}
+            {hayProductosNuevos && categoriaActiva === '__nuevo__' && (
+              <section className="seccion">
+                <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-nuevo" />Nuevo</h2>
+                <div className="grilla">
+                  {productos.filter(p => p.es_nuevo).map(p => <TarjetaProducto key={p.id} prod={p} />)}
+                </div>
+              </section>
+            )}
+
             {/* Promociones: se muestran si estamos en "Todo" o en "Promociones" */}
             {promociones.length > 0 && (categoriaActiva === '__todo__' || categoriaActiva === '__promos__') && (
               <section className="seccion">
@@ -393,7 +407,7 @@ export default function MenuPage() {
               })}
 
             {/* Categoría específica sin productos */}
-            {categoriaActiva !== '__todo__' && categoriaActiva !== '__promos__' &&
+            {categoriaActiva !== '__todo__' && categoriaActiva !== '__promos__' && categoriaActiva !== '__nuevo__' &&
               productos.filter(p => p.categoria_id === categoriaActiva).length === 0 && (
                 <div className="seccion-vacia">
                   <p>No hay productos cargados en esta categoría todavía.</p>
@@ -682,6 +696,7 @@ export default function MenuPage() {
         .seccion-titulo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #22201c; padding: 0 4px 14px; display: flex; align-items: center; gap: 10px; }
         .titulo-bar { width: 4px; height: 18px; background: #e23e45; border-radius: 2px; }
         .titulo-bar-verde { background: #3c8261; }
+        .titulo-bar-nuevo { background: #d9a534; }
 
         .grilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .grilla { gap: 14px; } }
@@ -697,6 +712,7 @@ export default function MenuPage() {
         .card-img-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c4bcae; font-size: 12px; }
         .card-img-ph-promo { background: linear-gradient(135deg, #f3efe6, #eae3d4); }
         .card-badge-agotado { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; background: #fff; color: #e23e45; border-radius: 6px; padding: 3px 7px; }
+        .card-badge-nuevo { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #d9a534; color: #fff; border-radius: 6px; padding: 3px 8px; box-shadow: 0 2px 6px rgba(217,165,52,0.4); }
         .card-badge-promo { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #3c8261; color: #fff; border-radius: 6px; padding: 3px 8px; }
 
         .card-body { padding: 10px 11px 12px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
