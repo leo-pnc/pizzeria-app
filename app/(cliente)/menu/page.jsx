@@ -110,6 +110,11 @@ export default function MenuPage() {
     if (fotos) setGaleria(fotos);
   }
 
+  function scrollFila(e, direccion) {
+    const cont = e.currentTarget.parentElement.querySelector('.fila-horizontal');
+    if (cont) cont.scrollBy({ left: direccion * 320, behavior: 'smooth' });
+  }
+
   function seleccionarCategoria(catId) {
     setCatActiva(catId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -162,16 +167,16 @@ export default function MenuPage() {
         <div className="card-body">
           <h3 className="card-nombre">{prod.nombre}</h3>
 
-          {prod.descripcion && (
-            <p className="card-desc">
-              {expandido || !descLarga ? prod.descripcion : `${prod.descripcion.slice(0, 60)}…`}
-              {descLarga && (
-                <button className="card-vermas" onClick={() => setExpandidoId(expandido ? null : prod.id)}>
-                  {expandido ? ' ver menos' : ' ver más'}
-                </button>
-              )}
-            </p>
-          )}
+          <p className={`card-desc ${expandido ? 'card-desc-expandida' : ''}`}>
+            {prod.descripcion
+              ? (expandido || !descLarga ? prod.descripcion : `${prod.descripcion.slice(0, 60)}…`)
+              : ''}
+            {descLarga && (
+              <button className="card-vermas" onClick={() => setExpandidoId(expandido ? null : prod.id)}>
+                {expandido ? ' ver menos' : ' ver más'}
+              </button>
+            )}
+          </p>
 
           {tieneVariantes ? (
             <div className="card-variantes">
@@ -242,16 +247,16 @@ export default function MenuPage() {
         </div>
         <div className="card-body">
           <h3 className="card-nombre">{promo.nombre}</h3>
-          {promo.descripcion && (
-            <p className="card-desc">
-              {expandido || !descLarga ? promo.descripcion : `${promo.descripcion.slice(0, 60)}…`}
-              {descLarga && (
-                <button className="card-vermas" onClick={() => setExpandidoId(expandido ? null : `promo_${promo.id}`)}>
-                  {expandido ? ' ver menos' : ' ver más'}
-                </button>
-              )}
-            </p>
-          )}
+          <p className={`card-desc ${expandido ? 'card-desc-expandida' : ''}`}>
+            {promo.descripcion
+              ? (expandido || !descLarga ? promo.descripcion : `${promo.descripcion.slice(0, 60)}…`)
+              : ''}
+            {descLarga && (
+              <button className="card-vermas" onClick={() => setExpandidoId(expandido ? null : `promo_${promo.id}`)}>
+                {expandido ? ' ver menos' : ' ver más'}
+              </button>
+            )}
+          </p>
           <div className="card-footer">
             <span className="card-precio">${promo.precio_promo.toLocaleString('es-AR')}</span>
             <div className="ctrl">
@@ -274,10 +279,10 @@ export default function MenuPage() {
   const hayProductosNuevos = productos.some(p => p.es_nuevo);
 
   const todasCats = [
-    { id: '__todo__', nombre: 'Todo' },
-    ...(hayProductosNuevos ? [{ id: '__nuevo__', nombre: 'Nuevo' }] : []),
-    ...(promociones.length > 0 ? [{ id: '__promos__', nombre: 'Promociones' }] : []),
-    ...categorias,
+    { id: '__todo__', nombre: 'Todo', count: productos.length + promociones.length },
+    ...(hayProductosNuevos ? [{ id: '__nuevo__', nombre: 'Nuevo', count: productos.filter(p => p.es_nuevo).length }] : []),
+    ...(promociones.length > 0 ? [{ id: '__promos__', nombre: 'Promociones', count: promociones.length }] : []),
+    ...categorias.map(cat => ({ ...cat, count: productos.filter(p => p.categoria_id === cat.id).length })),
   ];
 
   return (
@@ -333,6 +338,7 @@ export default function MenuPage() {
             {todasCats.map(cat => (
               <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
                 {cat.nombre}
+                <span className="cat-btn-count">{cat.count}</span>
               </button>
             ))}
           </div>
@@ -376,10 +382,14 @@ export default function MenuPage() {
               <section className="seccion">
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-verde" />Promociones</h2>
                 {categoriaActiva === '__todo__' ? (
-                  <div className="fila-horizontal">
-                    {promociones.map(pr => (
-                      <div key={pr.id} className="card-h-wrap"><TarjetaPromo promo={pr} /></div>
-                    ))}
+                  <div className="fila-horizontal-wrap">
+                    <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
+                    <div className="fila-horizontal">
+                      {promociones.map(pr => (
+                        <div key={pr.id} className="card-h-wrap"><TarjetaPromo promo={pr} /></div>
+                      ))}
+                    </div>
+                    <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
                   </div>
                 ) : (
                   <div className="grilla">
@@ -401,10 +411,14 @@ export default function MenuPage() {
                   <section key={cat.id} className="seccion">
                     <h2 className="seccion-titulo"><span className="titulo-bar" />{cat.nombre}</h2>
                     {categoriaActiva === '__todo__' ? (
-                      <div className="fila-horizontal">
-                        {prods.map(p => (
-                          <div key={p.id} className="card-h-wrap"><TarjetaProducto prod={p} /></div>
-                        ))}
+                      <div className="fila-horizontal-wrap">
+                        <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
+                        <div className="fila-horizontal">
+                          {prods.map(p => (
+                            <div key={p.id} className="card-h-wrap"><TarjetaProducto prod={p} /></div>
+                          ))}
+                        </div>
+                        <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
                       </div>
                     ) : (
                       <div className="grilla">
@@ -613,7 +627,7 @@ export default function MenuPage() {
             <span className="barra-carrito-badge">{cantidad}</span>
           </span>
           <span className="barra-carrito-texto">
-            <strong>Ver mi pedido</strong>
+            <strong>Realizar pedido</strong>
             <span>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</span>
           </span>
           <span className="barra-carrito-precio">${subtotal.toLocaleString('es-AR')}</span>
@@ -667,7 +681,7 @@ export default function MenuPage() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
         /* ── HEADER ── */
-        .header { background: #fff; border-bottom: 1px solid #ece6dc; position: sticky; top: 0; z-index: 30; }
+        .header { background: rgba(255,255,255,0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #ece6dc; position: sticky; top: 0; z-index: 30; }
         .header-inner { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .header-marca { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
         .header-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; }
@@ -728,12 +742,14 @@ export default function MenuPage() {
         .busq-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #8a8378; font-size: 14px; cursor: pointer; padding: 4px; }
 
         /* ── NAV CATEGORÍAS ── */
-        .cat-nav { background: #fff; border-bottom: 1px solid #ece6dc; overflow-x: auto; -webkit-overflow-scrolling: touch; position: sticky; top: 117px; z-index: 25; }
+        .cat-nav { background: rgba(255,255,255,0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #ece6dc; overflow-x: auto; -webkit-overflow-scrolling: touch; position: sticky; top: 117px; z-index: 25; }
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-nav-inner { display: flex; max-width: 760px; margin: 0 auto; padding: 0 12px; white-space: nowrap; }
         .cat-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: #8a8378; padding: 11px 12px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
         .cat-btn:hover { color: #22201c; }
         .cat-btn.activo { color: #e23e45; border-bottom-color: #e23e45; font-weight: 700; }
+        .cat-btn-count { font-size: 10.5px; color: #b0a898; margin-left: 4px; font-weight: 600; }
+        .cat-btn.activo .cat-btn-count { color: #e23e45; opacity: 0.7; }
 
         /* ── MAIN / GRILLA DE TARJETAS ── */
         .main { max-width: 760px; margin: 0 auto; padding: 0 12px 130px; }
@@ -759,6 +775,21 @@ export default function MenuPage() {
         .card-h-wrap { flex-shrink: 0; width: 150px; scroll-snap-align: start; }
         @media (min-width: 560px) { .card-h-wrap { width: 170px; } }
 
+        .fila-horizontal-wrap { position: relative; }
+        .fila-flecha {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 34px; height: 34px; border-radius: 50%;
+          background: #fff; border: 1px solid #ece6dc; color: #55504a;
+          font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+        }
+        .fila-flecha:hover { border-color: #e23e45; color: #e23e45; }
+        .fila-flecha-izq { left: -6px; }
+        .fila-flecha-der { right: -6px; }
+        @media (max-width: 460px) {
+          .fila-flecha { width: 30px; height: 30px; font-size: 17px; }
+        }
+
         /* ── TARJETA (2 por línea) ── */
         .card { background: #fff; border: 1px solid #ece6dc; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.2s; }
         .card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.07); transform: translateY(-1px); }
@@ -774,19 +805,20 @@ export default function MenuPage() {
         .card-badge-promo { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #3c8261; color: #fff; border-radius: 6px; padding: 3px 8px; }
 
         .card-body { padding: 10px 11px 12px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
-        .card-nombre { font-size: 13.5px; font-weight: 700; color: #22201c; line-height: 1.3; }
-        .card-desc { font-size: 11.5px; color: #8a8378; line-height: 1.45; }
+        .card-nombre { font-size: 13.5px; font-weight: 700; color: #22201c; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 35px; }
+        .card-desc { font-size: 11.5px; color: #8a8378; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 33px; }
+        .card-desc-expandida { -webkit-line-clamp: unset; overflow: visible; min-height: 0; }
         .card-vermas { background: none; border: none; padding: 0; margin: 0; color: #e23e45; font-size: 11.5px; font-weight: 600; cursor: pointer; }
 
         .card-footer { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 4px; }
-        .card-precio { font-size: 15px; font-weight: 700; color: #22201c; }
+        .card-precio { font-size: 15px; font-weight: 600; color: #c23a3f; }
 
         .card-variantes { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
         .variante-row { display: flex; flex-direction: column; gap: 5px; padding-top: 6px; border-top: 1px solid #f3efe6; }
         .variante-row:first-child { border-top: none; padding-top: 0; }
         .variante-info { display: flex; align-items: baseline; justify-content: space-between; }
         .variante-nombre { font-size: 11.5px; color: #55504a; }
-        .variante-precio { font-size: 12.5px; font-weight: 700; color: #22201c; }
+        .variante-precio { font-size: 12.5px; font-weight: 600; color: #c23a3f; }
 
         /* ── CONTROLES +/- ── */
         .ctrl { display: flex; align-items: center; gap: 6px; }
