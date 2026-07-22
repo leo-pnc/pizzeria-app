@@ -371,17 +371,25 @@ export default function MenuPage() {
               </section>
             )}
 
-            {/* Promociones: se muestran si estamos en "Todo" o en "Promociones" */}
+            {/* Promociones: en "Todo" es una fila horizontal, en su propia pestaña es grilla vertical */}
             {promociones.length > 0 && (categoriaActiva === '__todo__' || categoriaActiva === '__promos__') && (
               <section className="seccion">
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-verde" />Promociones</h2>
-                <div className="grilla">
-                  {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
-                </div>
+                {categoriaActiva === '__todo__' ? (
+                  <div className="fila-horizontal">
+                    {promociones.map(pr => (
+                      <div key={pr.id} className="card-h-wrap"><TarjetaPromo promo={pr} /></div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grilla">
+                    {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
+                  </div>
+                )}
               </section>
             )}
 
-            {/* Categorías: en "Todo" se muestran todas, si no, solo la seleccionada */}
+            {/* Categorías: en "Todo" cada una es una fila horizontal; si hay una elegida, grilla vertical con todo */}
             {categorias
               .filter(cat => categoriaActiva === '__todo__' || categoriaActiva === cat.id)
               .map(cat => {
@@ -392,9 +400,17 @@ export default function MenuPage() {
                 return (
                   <section key={cat.id} className="seccion">
                     <h2 className="seccion-titulo"><span className="titulo-bar" />{cat.nombre}</h2>
-                    <div className="grilla">
-                      {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
-                    </div>
+                    {categoriaActiva === '__todo__' ? (
+                      <div className="fila-horizontal">
+                        {prods.map(p => (
+                          <div key={p.id} className="card-h-wrap"><TarjetaProducto prod={p} /></div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grilla">
+                        {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
+                      </div>
+                    )}
                   </section>
                 );
               })}
@@ -729,6 +745,19 @@ export default function MenuPage() {
 
         .grilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .grilla { gap: 14px; } }
+
+        .fila-horizontal {
+          display: flex;
+          gap: 10px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 4px;
+          scroll-snap-type: x proximity;
+        }
+        .fila-horizontal::-webkit-scrollbar { height: 4px; }
+        .fila-horizontal::-webkit-scrollbar-thumb { background: #ece6dc; border-radius: 4px; }
+        .card-h-wrap { flex-shrink: 0; width: 150px; scroll-snap-align: start; }
+        @media (min-width: 560px) { .card-h-wrap { width: 170px; } }
 
         /* ── TARJETA (2 por línea) ── */
         .card { background: #fff; border: 1px solid #ece6dc; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.2s; }
