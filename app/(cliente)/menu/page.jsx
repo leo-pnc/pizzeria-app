@@ -303,15 +303,6 @@ export default function MenuPage() {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               <span className="btn-consulta-txt">Consultar</span>
             </a>
-
-            {/* ── CARRITO — arriba a la derecha ── */}
-            {cantidad > 0 && (
-              <button className="btn-carrito" onClick={() => setShowCheckout(true)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-                <span className="btn-carrito-badge">{cantidad}</span>
-                <span className="btn-carrito-precio">${subtotal.toLocaleString('es-AR')}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -394,7 +385,9 @@ export default function MenuPage() {
             {categorias
               .filter(cat => categoriaActiva === '__todo__' || categoriaActiva === cat.id)
               .map(cat => {
-                const prods = productos.filter(p => p.categoria_id === cat.id);
+                const prods = productos
+                  .filter(p => p.categoria_id === cat.id)
+                  .sort((a, b) => (b.es_nuevo ? 1 : 0) - (a.es_nuevo ? 1 : 0));
                 if (!prods.length) return null;
                 return (
                   <section key={cat.id} className="seccion">
@@ -596,9 +589,24 @@ export default function MenuPage() {
         </div>
       )}
 
+      {/* ── BARRA DE CARRITO — grande, fija abajo, bien visible ── */}
+      {cantidad > 0 && !showCheckout && (
+        <button className="barra-carrito" onClick={() => setShowCheckout(true)}>
+          <span className="barra-carrito-icono">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <span className="barra-carrito-badge">{cantidad}</span>
+          </span>
+          <span className="barra-carrito-texto">
+            <strong>Ver mi pedido</strong>
+            <span>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</span>
+          </span>
+          <span className="barra-carrito-precio">${subtotal.toLocaleString('es-AR')}</span>
+        </button>
+      )}
+
       {/* ── BOTONES FLOTANTES DE REDES SOCIALES ── */}
       {!showCheckout && (config?.instagram_url || config?.facebook_url) && (
-        <div className="redes-flotantes">
+        <div className={`redes-flotantes ${cantidad > 0 ? 'redes-con-carrito' : ''}`}>
           {config.instagram_url && (
             <a className="btn-red btn-red-ig" href={config.instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -624,7 +632,15 @@ export default function MenuPage() {
       )}
 
       {showCheckout && (
-        <Checkout config={config} metodos={metodos} abierto={abierto} proxApertura={proxApertura} onClose={() => setShowCheckout(false)} />
+        <Checkout
+          config={config}
+          metodos={metodos}
+          abierto={abierto}
+          proxApertura={proxApertura}
+          horarios={horariosRef.current}
+          franjas={franjasRef.current}
+          onClose={() => setShowCheckout(false)}
+        />
       )}
 
       <style jsx global>{`
@@ -647,10 +663,23 @@ export default function MenuPage() {
         .btn-consulta { display: flex; align-items: center; gap: 6px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter 0.15s; }
         .btn-consulta:hover { filter: brightness(1.08); }
 
-        .btn-carrito { display: flex; align-items: center; gap: 7px; background: #22201c; color: #fffbf5; border: none; border-radius: 22px; padding: 9px 14px; cursor: pointer; position: relative; transition: transform 0.15s, box-shadow 0.15s; }
-        .btn-carrito:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
-        .btn-carrito-badge { position: absolute; top: -6px; right: -6px; background: #e23e45; color: #fff; font-size: 10px; font-weight: 700; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
-        .btn-carrito-precio { font-size: 13px; font-weight: 700; color: #f0c675; }
+        /* ── BARRA DE CARRITO GRANDE ── */
+        .barra-carrito {
+          position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 45;
+          background: #22201c; color: #fffbf5; border: none; border-radius: 18px;
+          padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+          cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+          animation: barraEntrar 0.35s cubic-bezier(0.32,0.72,0,1);
+          max-width: 520px; margin: 0 auto;
+        }
+        @keyframes barraEntrar { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .barra-carrito:active { transform: scale(0.98); }
+        .barra-carrito-icono { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #e23e45; width: 46px; height: 46px; border-radius: 50%; }
+        .barra-carrito-badge { position: absolute; top: -4px; right: -4px; background: #fffbf5; color: #22201c; font-size: 12px; font-weight: 800; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid #22201c; }
+        .barra-carrito-texto { flex: 1; text-align: left; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .barra-carrito-texto strong { font-size: 16px; font-weight: 800; }
+        .barra-carrito-texto span { font-size: 12.5px; color: #c9c2b6; }
+        .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; }
 
         /* ── ESTADO ── */
         .estado-bar { max-width: 760px; margin: 0 auto; padding: 6px 16px 10px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; }
@@ -788,7 +817,9 @@ export default function MenuPage() {
           flex-direction: column;
           gap: 10px;
           z-index: 35;
+          transition: bottom 0.2s;
         }
+        .redes-con-carrito { bottom: 92px; }
         .btn-red {
           width: 46px; height: 46px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;

@@ -185,7 +185,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
         }
 
         .mapa {
-          height: 300px;
+          height: min(300px, 42vh);
           width: 100%;
           border-radius: 14px;
           overflow: hidden;
@@ -204,7 +204,7 @@ export default function MapSelector({ lat, lng, radioKm, onConfirmar, onCancelar
           padding: 10px 14px; font-size: 13px; color: #e23e45; font-weight: 500;
         }
 
-        .acciones { display: flex; gap: 8px; }
+        .acciones { display: flex; gap: 8px; position: sticky; bottom: -2px; background: #faf7f2; padding: 10px 0 2px; margin-top: -4px; z-index: 5; }
 
         .btn-cancel {
           flex: 1; background: transparent; border: 1.5px solid #e4ddd3;
