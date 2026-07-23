@@ -266,7 +266,7 @@ export default function MenuPage() {
                   <span className="ctrl-n">{c}</span>
                 </>
               )}
-              <button className="ctrl-btn-agregar" onClick={() => manejarAgregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo })}>
+              <button className="ctrl-btn-agregar" onClick={() => manejarAgregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo, imagen_url: promo.imagen_url })}>
                 + Agregar
               </button>
             </div>
