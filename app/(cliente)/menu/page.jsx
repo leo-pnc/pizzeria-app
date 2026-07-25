@@ -21,6 +21,7 @@ export default function MenuPage() {
   const [toast, setToast]                 = useState(null);
   const [modalReapertura, setModalReapertura] = useState(false);
   const [modalHorarios, setModalHorarios]     = useState(false);
+  const [headerCompacto, setHeaderCompacto]   = useState(false);
   const horariosRef = useRef([]);
   const franjasRef  = useRef([]);
   const configRef   = useRef(null);
@@ -34,6 +35,21 @@ export default function MenuPage() {
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
+
+  // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
+  useEffect(() => {
+    let ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setHeaderCompacto(window.scrollY > 28);
+        ticking = false;
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -289,61 +305,62 @@ export default function MenuPage() {
     <div className="pagina">
 
       {/* ── HEADER ── */}
-      <header className="header">
-        <div className="header-inner">
-          <div className="header-marca">
-            <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
-            <div className="header-textos">
-              <h1 className="header-nombre">Don Adriano's</h1>
-              <span className="header-sub">Pizzería · San José, Guaymallén, Mendoza</span>
+      <div className={`sticky-top ${headerCompacto ? 'compacto' : ''}`}>
+        <header className="header">
+          <div className="header-inner">
+            <div className="header-marca">
+              <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
+              <div className="header-textos">
+                <h1 className="header-nombre">Don Adriano's</h1>
+                <span className="header-sub">Pizzería · San José, Guaymallén, Mendoza</span>
+              </div>
+            </div>
+
+            <div className="header-acciones">
+              <a
+                className="btn-consulta"
+                href={`https://wa.me/${config?.whatsapp_numero}?text=${encodeURIComponent('Hola, tengo una consulta sobre el menú.')}`}
+                target="_blank" rel="noopener noreferrer"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span className="btn-consulta-txt">Consultar</span>
+              </a>
             </div>
           </div>
 
-          <div className="header-acciones">
-            <a
-              className="btn-consulta"
-              href={`https://wa.me/${config?.whatsapp_numero}?text=${encodeURIComponent('Hola, tengo una consulta sobre el menú.')}`}
-              target="_blank" rel="noopener noreferrer"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              <span className="btn-consulta-txt">Consultar</span>
-            </a>
-          </div>
-        </div>
-
-        {abierto !== null && (
-          <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
-            <span className="estado-dot" />
-            <span>
-              {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
-            </span>
-            <button className="btn-ver-horarios" onClick={() => setModalHorarios(true)}>
-              Ver horarios
-            </button>
-          </div>
-        )}
-
-        <div className="busq-wrap">
-          <div className="busq-inner">
-            <svg className="busq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input className="busq-input" type="search" placeholder="Buscar en el menú…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-            {busqueda && <button className="busq-clear" onClick={() => setBusqueda('')}>✕</button>}
-          </div>
-        </div>
-      </header>
-
-      {!enBusqueda && (
-        <nav className="cat-nav">
-          <div className="cat-nav-inner">
-            {todasCats.map(cat => (
-              <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
-                {cat.nombre}
-                <span className="cat-btn-count">{cat.count}</span>
+          {abierto !== null && (
+            <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
+              <span className="estado-dot" />
+              <span>
+                {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
+              </span>
+              <button className="btn-ver-horarios" onClick={() => setModalHorarios(true)}>
+                Ver horarios
               </button>
-            ))}
+            </div>
+          )}
+
+          <div className="busq-wrap">
+            <div className="busq-inner">
+              <svg className="busq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input className="busq-input" type="search" placeholder="Buscar en el menú…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+              {busqueda && <button className="busq-clear" onClick={() => setBusqueda('')}>✕</button>}
+            </div>
           </div>
-        </nav>
-      )}
+        </header>
+
+        {!enBusqueda && (
+          <nav className="cat-nav">
+            <div className="cat-nav-inner">
+              {todasCats.map(cat => (
+                <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
+                  {cat.nombre}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
+      </div>
 
       <main className="main">
         {enBusqueda && (
@@ -380,7 +397,11 @@ export default function MenuPage() {
             {/* Promociones: en "Todo" es una fila horizontal, en su propia pestaña es grilla vertical */}
             {promociones.length > 0 && (categoriaActiva === '__todo__' || categoriaActiva === '__promos__') && (
               <section className="seccion">
-                <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-verde" />Promociones</h2>
+                <h2 className="seccion-titulo">
+                  <span className="titulo-bar titulo-bar-verde" />
+                  Promociones
+                  {categoriaActiva === '__todo__' && <span className="seccion-count">{promociones.length} producto{promociones.length !== 1 ? 's' : ''}</span>}
+                </h2>
                 {categoriaActiva === '__todo__' ? (
                   <div className="fila-horizontal-wrap">
                     <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
@@ -409,7 +430,11 @@ export default function MenuPage() {
                 if (!prods.length) return null;
                 return (
                   <section key={cat.id} className="seccion">
-                    <h2 className="seccion-titulo"><span className="titulo-bar" />{cat.nombre}</h2>
+                    <h2 className="seccion-titulo">
+                      <span className="titulo-bar" />
+                      {cat.nombre}
+                      {categoriaActiva === '__todo__' && <span className="seccion-count">{prods.length} producto{prods.length !== 1 ? 's' : ''}</span>}
+                    </h2>
                     {categoriaActiva === '__todo__' ? (
                       <div className="fila-horizontal-wrap">
                         <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
@@ -681,13 +706,19 @@ export default function MenuPage() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
         /* ── HEADER ── */
-        .header { background: rgba(255,255,255,0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #ece6dc; position: sticky; top: 0; z-index: 30; }
-        .header-inner { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.78); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); transition: box-shadow 0.25s ease; }
+        .sticky-top.compacto { box-shadow: 0 2px 14px rgba(0,0,0,0.06); }
+
+        .header { border-bottom: 1px solid rgba(236,230,220,0.7); }
+        .header-inner { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: padding 0.25s ease; }
+        .compacto .header-inner { padding: 8px 16px; }
         .header-marca { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
-        .header-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; }
+        .header-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; transition: width 0.25s ease, height 0.25s ease; }
+        .compacto .header-logo { width: 30px; height: 30px; }
         .header-textos { min-width: 0; overflow: hidden; }
         .header-nombre { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #e23e45; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header-sub { font-size: 11px; color: #8a8378; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-sub { font-size: 11px; color: #8a8378; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 16px; opacity: 1; transition: max-height 0.2s ease, opacity 0.15s ease, margin 0.2s ease; }
+        .compacto .header-sub { max-height: 0; opacity: 0; margin-top: 0; }
         .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
         .btn-consulta { display: flex; align-items: center; gap: 6px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter 0.15s; }
@@ -712,7 +743,8 @@ export default function MenuPage() {
         .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; }
 
         /* ── ESTADO ── */
-        .estado-bar { max-width: 760px; margin: 0 auto; padding: 6px 16px 10px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; }
+        .estado-bar { max-width: 760px; margin: 0 auto; padding: 6px 16px 10px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; max-height: 30px; opacity: 1; overflow: hidden; transition: max-height 0.2s ease, opacity 0.15s ease, padding 0.2s ease; }
+        .compacto .estado-bar { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
         .estado-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
         .abierto { color: #3c8261; }
         .abierto .estado-dot { background: #3c8261; box-shadow: 0 0 0 3px rgba(61,74,47,0.15); animation: pulso-verde 2s infinite; }
@@ -734,7 +766,8 @@ export default function MenuPage() {
         }
 
         /* ── BUSCADOR ── */
-        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; }
+        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; transition: padding 0.2s ease; }
+        .compacto .busq-wrap { padding-bottom: 8px; }
         .busq-inner { position: relative; }
         .busq-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8a8378; pointer-events: none; }
         .busq-input { width: 100%; background: #f3efe6; border: 1.5px solid #ece6dc; border-radius: 10px; padding: 10px 36px; font-size: 14px; color: #22201c; font-family: inherit; outline: none; transition: border-color 0.15s; }
@@ -742,14 +775,14 @@ export default function MenuPage() {
         .busq-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #8a8378; font-size: 14px; cursor: pointer; padding: 4px; }
 
         /* ── NAV CATEGORÍAS ── */
-        .cat-nav { background: rgba(255,255,255,0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #ece6dc; overflow-x: auto; -webkit-overflow-scrolling: touch; position: sticky; top: 117px; z-index: 25; }
+        .cat-nav { border-bottom: 1px solid rgba(236,230,220,0.7); overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-nav-inner { display: flex; max-width: 760px; margin: 0 auto; padding: 0 12px; white-space: nowrap; }
-        .cat-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: #8a8378; padding: 11px 12px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
+        .cat-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: #8a8378; padding: 11px 12px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s, padding 0.2s ease; }
+        .compacto .cat-btn { padding: 8px 12px; }
         .cat-btn:hover { color: #22201c; }
         .cat-btn.activo { color: #e23e45; border-bottom-color: #e23e45; font-weight: 700; }
-        .cat-btn-count { font-size: 10.5px; color: #b0a898; margin-left: 4px; font-weight: 600; }
-        .cat-btn.activo .cat-btn-count { color: #e23e45; opacity: 0.7; }
+        .seccion-count { font-size: 11.5px; font-weight: 500; color: #b0a898; margin-left: auto; }
 
         /* ── MAIN / GRILLA DE TARJETAS ── */
         .main { max-width: 760px; margin: 0 auto; padding: 0 12px 130px; }

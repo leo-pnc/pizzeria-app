@@ -87,6 +87,33 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   const [errorPaso, setErrorPaso]             = useState(null);
 
   const hidratado = useRef(false);
+  const drawerRef  = useRef(null);
+  const arrastreY  = useRef({ inicio: 0, actual: 0, activo: false });
+
+  function onArrastreInicio(e) {
+    arrastreY.current = { inicio: e.touches ? e.touches[0].clientY : e.clientY, actual: 0, activo: true };
+    if (drawerRef.current) drawerRef.current.style.transition = 'none';
+  }
+  function onArrastreMover(e) {
+    if (!arrastreY.current.activo) return;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const delta = Math.max(0, y - arrastreY.current.inicio);
+    arrastreY.current.actual = delta;
+    if (drawerRef.current) drawerRef.current.style.transform = `translateY(${delta}px)`;
+  }
+  function onArrastreFin() {
+    if (!arrastreY.current.activo) return;
+    arrastreY.current.activo = false;
+    if (drawerRef.current) {
+      drawerRef.current.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
+      if (arrastreY.current.actual > 110) {
+        drawerRef.current.style.transform = 'translateY(100%)';
+        setTimeout(() => onClose(), 200);
+      } else {
+        drawerRef.current.style.transform = 'translateY(0)';
+      }
+    }
+  }
   const [borradorRestaurado, setBorradorRestaurado] = useState(false);
 
   // ── Bloquear scroll del fondo ────────────────────────────────────────────────
@@ -102,7 +129,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
     if (borrador) {
       const tieneProgreso = borrador.paso === 'checkout' || borrador.cliente?.nombre || borrador.direccion || borrador.metodoPago;
       if (tieneProgreso) setBorradorRestaurado(true);
-      if (borrador.paso) setPaso(borrador.paso);
+      if (borrador.paso === 'carrito' || borrador.paso === 'checkout') setPaso(borrador.paso);
       if (borrador.tipoEntrega) setTipoEntrega(borrador.tipoEntrega);
       if (borrador.modoDireccion) setModoDireccion(borrador.modoDireccion);
       if (borrador.direccion) setDireccion(borrador.direccion);
@@ -342,19 +369,30 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   return (
     <>
       <div className="ch-backdrop" onClick={onClose} />
-      <div className="ch-drawer">
-        <div className="ch-handle" />
+      <div className="ch-drawer" ref={drawerRef}>
+        <div
+          className="ch-arrastrable"
+          onTouchStart={onArrastreInicio}
+          onTouchMove={onArrastreMover}
+          onTouchEnd={onArrastreFin}
+          onPointerDown={onArrastreInicio}
+          onPointerMove={onArrastreMover}
+          onPointerUp={onArrastreFin}
+        >
+          <div className="ch-handle" />
 
-        {/* ── HEADER ── */}
-        <div className="ch-header">
-          <div className="ch-header-l">
-            {paso === 'checkout' && (
-              <button className="ch-back" onClick={() => { setErrorPaso(null); setPaso('carrito'); }}>←</button>
-            )}
-            <h2 className="ch-titulo">{paso === 'carrito' ? 'Tu pedido' : 'Finalizar pedido'}</h2>
+          {/* ── HEADER ── */}
+          <div className="ch-header">
+            <div className="ch-header-l">
+              {paso === 'checkout' && (
+                <button className="ch-back" onClick={() => { setErrorPaso(null); setPaso('carrito'); }}>←</button>
+              )}
+              <h2 className="ch-titulo">{paso === 'carrito' ? 'Tu pedido' : 'Finalizar pedido'}</h2>
+            </div>
+            <button className="ch-close" onClick={onClose}>✕</button>
           </div>
-          <button className="ch-close" onClick={onClose}>✕</button>
         </div>
+
 
         {borradorRestaurado && (
           <div className="ch-aviso-restaurado">
@@ -680,6 +718,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; backdrop-filter: blur(2px); }
         .ch-drawer { position: fixed; bottom: 0; left: 0; right: 0; background: #faf7f2; border-top: 1px solid #ede8e0; border-radius: 20px 20px 0 0; z-index: 60; display: flex; flex-direction: column; max-height: 92vh; animation: slideUp 0.28s cubic-bezier(0.32,0.72,0,1); }
         @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        .ch-arrastrable { flex-shrink: 0; touch-action: none; cursor: grab; }
         .ch-handle { width: 36px; height: 4px; background: #ddd8d0; border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
         .ch-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; flex-shrink: 0; }
         .ch-header-l { display: flex; align-items: center; gap: 10px; }
