@@ -31,8 +31,8 @@ function iconoMetodo(nombre) {
 const ICONO_EFECTIVO = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>;
 const ICONO_MOTO = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M12 17.5L14 10h4l2 3"/><path d="M7 17.5h6l3-6.5h2"/><path d="M9 10h4l-1-3H8"/></svg>;
 
-const PASOS = ['carrito', 'pago', 'entrega', 'horario', 'resumen'];
-const LABELS_PASO = { carrito: 'Pedido', pago: 'Pago', entrega: 'Entrega', horario: 'Horario', resumen: 'Resumen' };
+const PASOS = ['carrito', 'entrega', 'pago', 'horario', 'resumen'];
+const LABELS_PASO = { carrito: 'Pedido', entrega: 'Entrega', pago: 'Pago', horario: 'Horario', resumen: 'Resumen' };
 
 export default function Checkout({ config, metodos, abierto, proxApertura, horarios, franjas, onClose }) {
   const { items, subtotal, quitar, agregar, vaciar } = useCarrito();
@@ -44,6 +44,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   const [metodoPago, setMetodoPago] = useState('');
   const [efectivoAbierto, setEfectivoAbierto] = useState(false);
   const [montoEfectivo, setMontoEfectivo] = useState('');
+  const [totalConfirmadoEfectivo, setTotalConfirmadoEfectivo] = useState(null);
 
   // Entrega
   const [tipoEntrega, setTipoEntrega]     = useState(null);
@@ -163,6 +164,13 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   const costoDelivery = tipoEntrega === 'delivery' ? Number(config?.delivery_precio || 0) : 0;
   const total         = subtotal + costoDelivery;
   const horaEsValida  = horarioDeseado !== 'personalizado' || horaValidaHoy(horaPersonalizada, horarios, franjas);
+  const necesitaReconfirmarEfectivo = metodoPago === 'Efectivo' && totalConfirmadoEfectivo !== null && totalConfirmadoEfectivo !== total;
+
+  // Si cambió el total (agregaron/sacaron productos) después de confirmar el
+  // monto en efectivo, pedimos el monto de nuevo — el vuelto ya no es el mismo
+  useEffect(() => {
+    if (necesitaReconfirmarEfectivo) setMontoEfectivo('');
+  }, [necesitaReconfirmarEfectivo]);
 
   function keyItem(it) { return `${it.tipo}_${it.id}_${it.variante_id || ''}`; }
 
@@ -229,7 +237,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   }
   function eliminarDefinitivo(it) { quitar(it); setItemRevelado(null); }
 
-  function guardarMontoEfectivo() { setMetodoPago('Efectivo'); setEfectivoAbierto(false); setErrorPaso(null); }
+  function guardarMontoEfectivo() { setMetodoPago('Efectivo'); setEfectivoAbierto(false); setErrorPaso(null); setTotalConfirmadoEfectivo(total); }
 
   function irA(pasoDestino, comoEdicion) {
     setErrorPaso(null);
@@ -343,10 +351,56 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
 
   function TarjetaItem({ it }) {
     const k = keyItem(it);
-    const revelado = itemRevelado === k;
+    // Solo puede estar "revelado" (con la papelera visible) si la cantidad es 1.
+    // Si vuelve a 2 o más, se oculta automáticamente sin importar el estado guardado.
+    const revelado = itemRevelado === k && it.cantidad === 1;
+    const itemElRef = useRef(null);
+    const arrastreItem = useRef({ inicioX: 0, activo: false });
+
+    function onDragInicio(e) {
+      if (it.cantidad !== 1) return; // solo se puede arrastrar si está por eliminarse
+      arrastreItem.current = { inicioX: e.touches ? e.touches[0].clientX : e.clientX, activo: true };
+      if (itemElRef.current) itemElRef.current.style.transition = 'none';
+    }
+    function onDragMover(e) {
+      if (!arrastreItem.current.activo || !itemElRef.current) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const delta = x - arrastreItem.current.inicioX;
+      // Clamp entre -64 (revelado) y 0 (oculto)
+      const base = revelado ? -64 : 0;
+      const nuevo = Math.min(0, Math.max(-64, base + delta));
+      itemElRef.current.style.transform = `translateX(${nuevo}px)`;
+    }
+    function onDragFin(e) {
+      if (!arrastreItem.current.activo || !itemElRef.current) return;
+      arrastreItem.current.activo = false;
+      itemElRef.current.style.transition = 'transform 0.2s ease';
+      const x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
+      const delta = x - arrastreItem.current.inicioX;
+      const base = revelado ? -64 : 0;
+      const posFinal = Math.min(0, Math.max(-64, base + delta));
+      if (posFinal < -32) {
+        setItemRevelado(k);
+        itemElRef.current.style.transform = 'translateX(-64px)';
+      } else {
+        setItemRevelado(null);
+        itemElRef.current.style.transform = 'translateX(0)';
+      }
+    }
+
     return (
       <div className="ch-item-wrap">
-        <div className={`ch-item ${revelado ? 'ch-item-revelado' : ''}`} onClick={() => revelado && setItemRevelado(null)}>
+        <div
+          ref={itemElRef}
+          className={`ch-item ${revelado ? 'ch-item-revelado' : ''}`}
+          onClick={() => revelado && setItemRevelado(null)}
+          onTouchStart={onDragInicio}
+          onTouchMove={onDragMover}
+          onTouchEnd={onDragFin}
+          onPointerDown={onDragInicio}
+          onPointerMove={onDragMover}
+          onPointerUp={onDragFin}
+        >
           <div className="ch-item-img">{it.imagen_url ? <img src={it.imagen_url} alt="" /> : <div className="ch-item-img-ph" />}</div>
           <div className="ch-item-info">
             <span className="ch-item-nombre">{it.nombre_snapshot}</span>
@@ -355,7 +409,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
           <div className="ch-item-ctrl" onClick={e => e.stopPropagation()}>
             <button className="ch-ctrl" onClick={() => manejarMenos(it)}>−</button>
             <span className="ch-ctrl-cant">{it.cantidad}</span>
-            <button className="ch-ctrl" onClick={() => agregar(it)}>+</button>
+            <button className="ch-ctrl" onClick={() => { agregar(it); setItemRevelado(null); }}>+</button>
           </div>
         </div>
         <button className="ch-item-trash" onClick={() => eliminarDefinitivo(it)} aria-label="Eliminar">
@@ -442,7 +496,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
                 {efectivoAbierto && (
                   <div className="ch-pago-efectivo-panel">
                     <p className="ch-pago-pregunta">¿Con cuánto vas a pagar?</p>
-                    <p className="ch-pago-recordatorio">Recordá que el valor del pedido es de ${subtotal.toLocaleString('es-AR')} + envío si corresponde</p>
+                    <p className="ch-pago-recordatorio">Recordá que el valor del pedido es de ${total.toLocaleString('es-AR')}</p>
                     <input type="number" min="0" className="ch-monto-input" placeholder="Ej: 5000" value={montoEfectivo} onChange={e => setMontoEfectivo(e.target.value)} />
                     <button className="ch-btn-guardar-monto" onClick={guardarMontoEfectivo}>GUARDAR MONTO</button>
                   </div>
@@ -600,10 +654,19 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
           {/* ══════ RESUMEN ══════ */}
           {paso === 'resumen' && (
             <div className="ch-seccion">
-              <div className="ch-resumen-campo">
-                <div><span className="ch-resumen-campo-lbl">Método de pago</span><span className="ch-resumen-campo-val">{metodoPago}{metodoPago === 'Efectivo' && montoEfectivo ? ` · $${montoEfectivo}` : ''}</span></div>
-                <button className="ch-btn-cambiar-chico" onClick={() => irA('pago', true)}>Cambiar</button>
-              </div>
+              {necesitaReconfirmarEfectivo ? (
+                <div className="ch-confirmar-guardada">
+                  <p className="ch-confirmar-titulo">El total cambió — ¿con cuánto vas a pagar ahora?</p>
+                  <p className="ch-pago-recordatorio">Nuevo total: ${total.toLocaleString('es-AR')}</p>
+                  <input type="number" min="0" className="ch-monto-input" placeholder="Ej: 5000" value={montoEfectivo} onChange={e => setMontoEfectivo(e.target.value)} />
+                  <button className="ch-btn-guardar-monto" onClick={guardarMontoEfectivo}>GUARDAR MONTO</button>
+                </div>
+              ) : (
+                <div className="ch-resumen-campo">
+                  <div><span className="ch-resumen-campo-lbl">Método de pago</span><span className="ch-resumen-campo-val">{metodoPago}{metodoPago === 'Efectivo' && montoEfectivo ? ` · $${montoEfectivo}` : ''}</span></div>
+                  <button className="ch-btn-cambiar-chico" onClick={() => irA('pago', true)}>Cambiar</button>
+                </div>
+              )}
 
               <div className="ch-resumen-campo">
                 <div>
@@ -646,7 +709,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         {/* ── FOOTER ── */}
         <div className="ch-footer">
           {paso === 'carrito' && (
-            <button className="ch-btn-primario" disabled={items.length === 0} onClick={() => setPaso('pago')}>ELEGIR MÉTODO DE PAGO</button>
+            <button className="ch-btn-primario" disabled={items.length === 0} onClick={() => setPaso('entrega')}>CONTINUAR</button>
           )}
           {paso === 'pago' && (
             <button className="ch-btn-primario" disabled={!metodoPago} onClick={() => { if (validarPago()) continuarDesde('pago'); }}>Continuar</button>
@@ -680,7 +743,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
               </div>
             ) : (
               <>
-                <button className="ch-btn-pedir" onClick={confirmarPedido} disabled={guardandoPedido}>
+                <button className="ch-btn-pedir" onClick={confirmarPedido} disabled={guardandoPedido || necesitaReconfirmarEfectivo}>
                   {guardandoPedido ? <span className="ch-btn-loading"><span className="ch-spinner-blanco" /> Guardando…</span> : 'PEDIR'}
                 </button>
                 {errorGuardado && <p className="ch-err ch-err-guardado">{errorGuardado}</p>}
@@ -723,7 +786,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-envio-info svg { color: #e23e45; }
 
         .ch-item-wrap { position: relative; overflow: hidden; border-radius: 10px; }
-        .ch-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #faf7f2; transition: transform 0.2s; position: relative; z-index: 1; border-bottom: 1px solid #ede8e0; }
+        .ch-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #faf7f2; transition: transform 0.2s; position: relative; z-index: 1; border-bottom: 1px solid #ede8e0; touch-action: pan-y; cursor: grab; }
         .ch-item-revelado { transform: translateX(-64px); }
         .ch-item-trash { position: absolute; top: 0; right: 0; bottom: 0; width: 64px; background: #e23e45; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .ch-item-img { width: 46px; height: 46px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f0ebe3; }
