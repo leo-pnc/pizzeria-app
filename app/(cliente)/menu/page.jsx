@@ -585,12 +585,23 @@ export default function MenuPage() {
             </div>
           </div>
 
-          {/* charco pegado al header: siempre montado (nunca reinicia su animación) para no perder la sincronía con el brillo; solo se oculta con opacidad */}
+          {/* charco pegado al header: la onda (el charco en sí) + la gota, siempre montado para no perder sincronía; solo se oculta con opacidad */}
           <div
             className={`charco-viajero ${charcoViajeroVisible ? 'charco-viajero-visible' : ''}`}
             style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }}
             aria-hidden="true"
           >
+            <div className="charco-viajero-onda">
+              <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="quesoGradFijo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F7B267" />
+                    <stop offset="100%" stopColor="#F0623E" />
+                  </linearGradient>
+                </defs>
+                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,22 300,22 C 283,22 279,11 262,11 C 244,11 238,32 216,32 C 194,32 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGradFijo)" />
+              </svg>
+            </div>
             <span className="charco-gota-viajera" />
           </div>
         </>
@@ -1179,15 +1190,17 @@ export default function MenuPage() {
           100% { opacity: 0; transform: translateY(92px) scaleY(2.7); }
         }
 
-        /* ── charco pegado al header: toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
+        /* ── charco pegado al header: la onda (el charco en sí) + la gota, toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
         .charco-viajero {
-          position: fixed; left: 50%; transform: translateX(-50%); width: 0; height: 0;
+          position: fixed; left: 0; right: 0;
           z-index: 38; pointer-events: none; opacity: 0;
           transition: top 0.2s ease, opacity 0.3s ease;
         }
         .charco-viajero.charco-viajero-visible { opacity: 1; }
+        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
+        .charco-viajero-onda .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .charco-gota-viajera {
-          position: absolute; top: 0; left: 0; width: 12px; height: 12px;
+          position: absolute; top: 14px; left: 54%; width: 12px; height: 12px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
           box-shadow: 0 1px 3px rgba(178,58,30,0.35);
           border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
