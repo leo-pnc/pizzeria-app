@@ -294,6 +294,10 @@ export default function MenuPage() {
 
   const hayProductosNuevos = productos.some(p => p.es_nuevo);
 
+  const galeriaConIndice = galeria.map((foto, i) => ({ foto, i }));
+  const galeriaFilaA = galeriaConIndice.filter((_, idx) => idx % 2 === 0);
+  const galeriaFilaB = galeriaConIndice.filter((_, idx) => idx % 2 === 1);
+
   const todasCats = [
     { id: '__todo__', nombre: 'Todo', count: productos.length + promociones.length },
     ...(hayProductosNuevos ? [{ id: '__nuevo__', nombre: 'Nuevo', count: productos.filter(p => p.es_nuevo).length }] : []),
@@ -362,32 +366,55 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* ── GALERÍA (ahora arriba, apenas se entra al menu) ── */}
+      {/* ── GALERÍA (dos filas cruzadas, con vida) ── */}
       {galeria.length > 0 && (
         <section className="galeria-seccion">
+          <div className="galeria-blob" />
           <div className="galeria-inner">
             <h2 className="galeria-titulo">
-              <span className="titulo-bar" />
+              <span className="galeria-icono">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
+              </span>
               Nuestra cocina
             </h2>
           </div>
-          <div className="galeria-scroll">
-            <div
-              className="galeria-track"
-              style={{ animationDuration: `${Math.max(galeria.length * 6.5, 24)}s` }}
-            >
-              {/* Duplicamos la lista para que la cinta sea continua sin cortes */}
-              {[...galeria, ...galeria].map((foto, idx) => (
-                <button
-                  key={`${foto.id}-${idx}`}
-                  className="galeria-thumb"
-                  onClick={() => setLightboxIdx(idx % galeria.length)}
-                  aria-hidden={idx >= galeria.length ? 'true' : undefined}
-                  tabIndex={idx >= galeria.length ? -1 : 0}
-                >
-                  <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
-                </button>
-              ))}
+
+          <div className="galeria-doble">
+            <div className="galeria-scroll">
+              <div
+                className="galeria-track galeria-track-der"
+                style={{ animationDuration: `${Math.max(galeriaFilaA.length * 7, 18)}s` }}
+              >
+                {[...galeriaFilaA, ...galeriaFilaA].map(({ foto, i }, idx) => (
+                  <button
+                    key={`a-${foto.id}-${idx}`}
+                    className="galeria-thumb galeria-thumb-a"
+                    onClick={() => setLightboxIdx(i)}
+                    aria-hidden={idx >= galeriaFilaA.length ? 'true' : undefined}
+                    tabIndex={idx >= galeriaFilaA.length ? -1 : 0}
+                  >
+                    <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="galeria-scroll">
+              <div
+                className="galeria-track galeria-track-izq"
+                style={{ animationDuration: `${Math.max(galeriaFilaB.length * 7, 18)}s` }}
+              >
+                {[...galeriaFilaB, ...galeriaFilaB].map(({ foto, i }, idx) => (
+                  <button
+                    key={`b-${foto.id}-${idx}`}
+                    className="galeria-thumb galeria-thumb-b"
+                    onClick={() => setLightboxIdx(i)}
+                    aria-hidden={idx >= galeriaFilaB.length ? 'true' : undefined}
+                    tabIndex={idx >= galeriaFilaB.length ? -1 : 0}
+                  >
+                    <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -956,26 +983,40 @@ export default function MenuPage() {
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
 
-        /* ── GALERÍA (carrusel animado) ── */
-        .galeria-seccion { background: #fff; border-bottom: 1px solid #ece6dc; padding: 20px 0 24px; }
-        .galeria-inner { max-width: 760px; margin: 0 auto; padding: 0 16px; }
-        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        /* ── GALERÍA (dos filas cruzadas, con vida) ── */
+        .galeria-seccion { position: relative; background: #fff; border-bottom: 1px solid #ece6dc; padding: 20px 0 22px; overflow: hidden; }
+        .galeria-blob { position: absolute; width: 220px; height: 220px; border-radius: 50%; background: #F0623E; opacity: 0.10; filter: blur(60px); top: -90px; right: -60px; animation: galeria-blob-mov 11s ease-in-out infinite; pointer-events: none; }
+        @keyframes galeria-blob-mov { 0%,100%{ transform: translate(0,0) scale(1); } 50%{ transform: translate(-24px,22px) scale(1.15); } }
+        .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
+        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+        .galeria-icono { display: flex; color: #F0623E; animation: galeria-icono-mover 2.4s ease-in-out infinite; }
+        @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-8deg) scale(1.12); } }
+
+        .galeria-doble { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
         .galeria-scroll { overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); }
-        .galeria-track { display: flex; gap: 10px; width: max-content; animation-name: galeria-desplazar; animation-timing-function: linear; animation-iteration-count: infinite; }
+        .galeria-track { display: flex; gap: 10px; width: max-content; animation-timing-function: linear; animation-iteration-count: infinite; }
+        .galeria-track-der { animation-name: galeria-derecha; }
+        .galeria-track-izq { animation-name: galeria-izquierda; }
         .galeria-scroll:hover .galeria-track { animation-play-state: paused; }
-        @keyframes galeria-desplazar {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        .galeria-thumb { flex-shrink: 0; width: 200px; height: 200px; border-radius: 20px; overflow: hidden; border: none; padding: 0; cursor: pointer; background: #f3efe6; transition: transform 0.2s ease; }
-        .galeria-thumb:nth-child(3n+2) { border-radius: 20px 8px 20px 8px; }
-        .galeria-thumb:nth-child(3n+3) { border-radius: 8px 20px 8px 20px; }
-        .galeria-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; pointer-events: none; }
-        .galeria-thumb:hover img { transform: scale(1.06); }
+        @keyframes galeria-derecha { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes galeria-izquierda { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+        .galeria-thumb { position: relative; flex-shrink: 0; border: none; padding: 0; cursor: pointer; border-radius: 18px; overflow: hidden; background: #f3efe6; transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .galeria-thumb-a { width: 148px; height: 188px; }
+        .galeria-thumb-b { width: 148px; height: 148px; margin-top: 22px; }
+        .galeria-thumb:hover, .galeria-thumb:active { transform: scale(1.06) rotate(-1deg); box-shadow: 0 10px 24px rgba(0,0,0,0.18); z-index: 2; }
+        .galeria-thumb::after { content: ''; position: absolute; inset: 0; border-radius: 18px; border: 3px solid transparent; pointer-events: none; transition: border-color 0.2s; }
+        .galeria-thumb:nth-child(4n+1)::after { border-color: rgba(240,98,62,0.55); }
+        .galeria-thumb:nth-child(4n+2)::after { border-color: rgba(217,165,52,0.55); }
+        .galeria-thumb:nth-child(4n+3)::after { border-color: rgba(46,130,90,0.45); }
+        .galeria-thumb:nth-child(4n+4)::after { border-color: rgba(240,98,62,0.25); }
+        .galeria-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; pointer-events: none; }
+        .galeria-thumb:hover img { transform: scale(1.08); }
 
         @media (prefers-reduced-motion: reduce) {
           .galeria-track { animation: none; }
           .galeria-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .galeria-icono, .galeria-blob { animation: none; }
         }
 
         /* ── UBICACIÓN ── */
