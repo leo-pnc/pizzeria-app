@@ -127,6 +127,7 @@ export default function MenuPage() {
   const [carritoAnimDelay, setCarritoAnimDelay] = useState('0ms');
   const footerRef    = useRef(null);
   const stickyTopRef = useRef(null);
+  const sentinelRef  = useRef(null);
 
   const navRef      = useRef(null);
 
@@ -170,35 +171,21 @@ export default function MenuPage() {
     return () => { ro.disconnect(); window.removeEventListener('resize', alRedimensionar); };
   }, []);
 
-  // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
-  // Usa histéresis (un umbral distinto para activar y para desactivar) + un pequeño tiempo mínimo entre cambios,
-  // para que una oscilación chica de scrollY cerca del umbral (rebote elástico, barra del navegador colapsando, etc.)
-  // no dispare un loop de comprimir/descomprimir sin parar.
+  // Comprimir el header cuando el usuario empieza a explorar el menú.
+  // En vez de medir window.scrollY en cada scroll (un valor que puede quedar afectado por el propio
+  // cambio de tamaño del header al comprimirse, generando un loop de comprimir/descomprimir sin parar),
+  // se usa un sentinel invisible y fijo al principio de la página: cuando ese punto fijo sale de la
+  // pantalla, se comprime; cuando vuelve a entrar, se descomprime. Al no depender del tamaño del header,
+  // no hay forma de que se retroalimente con su propia animación.
   useEffect(() => {
-    let ticking = false;
-    let ultimoCambio = 0;
-    const UMBRAL_ENTRAR = 64; // por encima de esto, se comprime
-    const UMBRAL_SALIR  = 20; // por debajo de esto, se descomprime
-    const COOLDOWN_MS   = 180;
-
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        const y = window.scrollY;
-        const ahora = performance.now();
-        if (ahora - ultimoCambio < COOLDOWN_MS) return;
-
-        setHeaderCompacto(prev => {
-          if (!prev && y > UMBRAL_ENTRAR) { ultimoCambio = ahora; return true; }
-          if (prev && y < UMBRAL_SALIR)   { ultimoCambio = ahora; return false; }
-          return prev;
-        });
-      });
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setHeaderCompacto(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
@@ -498,6 +485,9 @@ export default function MenuPage() {
 
   return (
     <div className="pagina">
+
+      {/* punto de referencia fijo (no cambia de tamaño ni de posición): decide cuándo comprimir el header, sin depender de la altura del propio header */}
+      <div ref={sentinelRef} className="scroll-sentinel" aria-hidden="true" />
 
       {/* ── HEADER ── */}
       <div className={`sticky-top ${headerCompacto ? 'compacto' : ''}`} ref={stickyTopRef}>
@@ -955,6 +945,7 @@ export default function MenuPage() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
         /* ── HEADER ── */
+        .scroll-sentinel { position: relative; height: 1px; margin-bottom: -1px; pointer-events: none; }
         .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.9); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); transition: box-shadow 0.25s ease, background 0.25s ease; }
         .sticky-top.compacto { box-shadow: 0 2px 14px rgba(0,0,0,0.08); background: rgba(255,251,245,0.96); }
 
