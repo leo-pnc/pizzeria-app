@@ -8,37 +8,48 @@ import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAv
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-// ── Galería "foto por foto": salto rápido hacia la derecha, pausa, repite ──
+// ── Galería "foto por foto": mazo apilado, la de adelante sale volando y pasa la siguiente ──
 function GaleriaCocina({ fotos, onSelect }) {
   const [idx, setIdx] = useState(0);
+  const [saliendo, setSaliendo] = useState(false);
+  const [sinTransicion, setSinTransicion] = useState(false);
 
   useEffect(() => {
     if (fotos.length <= 1) return;
-    const id = setInterval(() => {
-      setIdx(prev => (prev + 1) % fotos.length);
-    }, 2800);
-    return () => clearInterval(id);
+    const ciclo = setInterval(() => {
+      setSaliendo(true);
+      setTimeout(() => {
+        setSinTransicion(true);
+        setIdx(prev => (prev + 1) % fotos.length);
+        setSaliendo(false);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setSinTransicion(false));
+        });
+      }, 480);
+    }, 3000);
+    return () => clearInterval(ciclo);
   }, [fotos.length]);
+
+  if (!fotos.length) return null;
+  const len = fotos.length;
+  const visibles = [0, 1, 2]
+    .filter(o => o < len)
+    .map(o => ({ foto: fotos[(idx + o) % len], indiceReal: (idx + o) % len, pos: o }));
 
   return (
     <div className="galeria-slider">
-      <div className="galeria-slider-marco">
-        <div
-          className="galeria-slider-track"
-          style={{ transform: `translateX(-${idx * 100}%)` }}
-        >
-          {fotos.map((foto, i) => (
-            <button
-              key={foto.id}
-              className="galeria-slider-item"
-              onClick={() => onSelect(i)}
-            >
-              <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
-            </button>
-          ))}
-        </div>
+      <div className="galeria-stack">
+        {visibles.slice().reverse().map(({ foto, indiceReal, pos }) => (
+          <button
+            key={foto.id}
+            className={`galeria-carta galeria-carta-p${pos} ${saliendo && pos === 0 ? 'galeria-carta-sale' : ''} ${sinTransicion ? 'galeria-sin-transicion' : ''}`}
+            onClick={() => onSelect(indiceReal)}
+          >
+            <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+          </button>
+        ))}
       </div>
-      {fotos.length > 1 && (
+      {len > 1 && (
         <div className="galeria-slider-puntos">
           {fotos.map((_, i) => (
             <span key={i} className={`galeria-punto ${i === idx ? 'activo' : ''}`} />
@@ -744,8 +755,8 @@ export default function MenuPage() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
         /* ── HEADER ── */
-        .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.78); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); transition: box-shadow 0.25s ease; }
-        .sticky-top.compacto { box-shadow: 0 2px 14px rgba(0,0,0,0.06); }
+        .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.9); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); transition: box-shadow 0.25s ease, background 0.25s ease; }
+        .sticky-top.compacto { box-shadow: 0 2px 14px rgba(0,0,0,0.08); background: rgba(255,251,245,0.96); }
 
         .header { border-bottom: 1px solid rgba(236,230,220,0.7); }
         .header-inner { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: padding 0.25s ease; }
@@ -962,10 +973,14 @@ export default function MenuPage() {
         @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
 
         .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .galeria-slider-marco { width: 100%; max-width: 190px; aspect-ratio: 4/5; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 24px rgba(34,32,28,0.16); background: #f3efe6; }
-        .galeria-slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.55s cubic-bezier(0.68,-0.1,0.27,1.15); }
-        .galeria-slider-item { flex: 0 0 100%; height: 100%; border: none; padding: 0; margin: 0; cursor: pointer; background: none; }
-        .galeria-slider-item img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+        .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; }
+        .galeria-carta { position: absolute; inset: 0; border: none; padding: 0; margin: 0; cursor: pointer; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 10px 22px rgba(34,32,28,0.18); transition: transform 0.5s cubic-bezier(0.34,1.35,0.64,1), opacity 0.4s ease; }
+        .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+        .galeria-carta-p0 { transform: translate(0,0) rotate(0deg) scale(1); z-index: 3; }
+        .galeria-carta-p1 { transform: translate(11px,9px) rotate(-7deg) scale(0.92); z-index: 2; opacity: 0.92; }
+        .galeria-carta-p2 { transform: translate(-9px,15px) rotate(6deg) scale(0.85); z-index: 1; opacity: 0.7; }
+        .galeria-carta-sale { transform: translate(135%,-8%) rotate(16deg) scale(0.9) !important; opacity: 0 !important; z-index: 4 !important; }
+        .galeria-sin-transicion { transition: none !important; }
         .galeria-slider-puntos { display: flex; gap: 5px; }
         .galeria-punto { width: 5px; height: 5px; border-radius: 50%; background: #e4dcc9; transition: width 0.3s ease, background 0.3s ease; }
         .galeria-punto.activo { width: 16px; background: #F0623E; }
@@ -980,7 +995,7 @@ export default function MenuPage() {
         .galeria-btn-secundario:hover { background: #f3efe6; }
 
         @media (prefers-reduced-motion: reduce) {
-          .galeria-slider-track { transition: none; }
+          .galeria-carta { transition: none; }
           .galeria-icono, .galeria-blob { animation: none; }
         }
 
