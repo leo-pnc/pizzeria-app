@@ -156,18 +156,25 @@ export default function MenuPage() {
     return () => obs.disconnect();
   }, [galeria.length, categoriaActiva, busqueda]);
 
-  // Mide la altura real del header pegajoso para anclar el charco justo debajo, y cuánto recorrido de pantalla le queda
+  // Sigue la altura REAL del header en todo momento (incluso mientras se comprime con su transición CSS al hacer scroll),
+  // para que el charco quede anclado exactamente a la altura del buscador y nunca se desfase
   useEffect(() => {
-    function medir() {
-      const altura = stickyTopRef.current?.offsetHeight || 72;
+    const el = stickyTopRef.current;
+    if (!el) return;
+    function aplicarAltura(altura) {
       setHeaderAltura(altura);
       setRecorridoCharco(Math.max(160, window.innerHeight - altura - 90));
     }
-    medir();
-    window.addEventListener('resize', medir);
-    const t = setTimeout(medir, 300);
-    return () => { window.removeEventListener('resize', medir); clearTimeout(t); };
-  }, [headerCompacto, abierto]);
+    aplicarAltura(el.offsetHeight || 72);
+    const ro = new ResizeObserver(([entry]) => {
+      const altura = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+      aplicarAltura(Math.round(altura));
+    });
+    ro.observe(el);
+    function alRedimensionar() { aplicarAltura(el.offsetHeight || 72); }
+    window.addEventListener('resize', alRedimensionar);
+    return () => { ro.disconnect(); window.removeEventListener('resize', alRedimensionar); };
+  }, []);
 
   // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
   useEffect(() => {
