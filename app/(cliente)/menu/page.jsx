@@ -122,7 +122,7 @@ export default function MenuPage() {
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
   const [headerAltura, setHeaderAltura] = useState(72);
   const [recorridoCharco, setRecorridoCharco] = useState(500);
-  const galeriaSeccionRef = useRef(null);
+  const charcoInicioRef = useRef(null);
   const footerRef    = useRef(null);
   const stickyTopRef = useRef(null);
 
@@ -130,17 +130,17 @@ export default function MenuPage() {
 
   useEffect(() => { cargar(); }, []);
 
-  // Muestra la flecha "pegada" al borde inferior de la pantalla solo mientras la sección de la cocina está a la vista
+  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header"
   useEffect(() => {
-    const el = galeriaSeccionRef.current;
+    const el = charcoInicioRef.current;
     if (!el) { setFlechaVisible(false); return; }
     const obs = new IntersectionObserver(
       ([entry]) => setFlechaVisible(entry.isIntersecting),
-      { threshold: 0.2 }
+      { threshold: 0, rootMargin: `-${headerAltura}px 0px 0px 0px` }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [galeria.length, categoriaActiva, busqueda]);
+  }, [galeria.length, categoriaActiva, busqueda, headerAltura]);
 
   // Detecta cuando se llega al final de la página (footer) para que el charco y la flecha guía desaparezcan ahí
   useEffect(() => {
@@ -488,7 +488,7 @@ export default function MenuPage() {
       {/* ── GALERÍA: foto por foto, salto rápido y pausa ── solo se ve en "Todo" ── */}
       {galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda && (
         <>
-          <section className="galeria-seccion" ref={galeriaSeccionRef}>
+          <section className="galeria-seccion">
             <div className="galeria-fondo" />
             <div className="galeria-overlay" />
             <div className="galeria-inner">
@@ -515,8 +515,10 @@ export default function MenuPage() {
                 </div>
               </div>
             </div>
+          </section>
 
-            {/* borde de queso/salsa derretida colgando del final de la foto, en los mismos tonos cálidos que la flecha */}
+          {/* el charco empieza justo donde termina el fondo de la cocina: onda + gota sobre el fondo claro de la página, sin nada oscuro detrás */}
+          <div className="galeria-charco-local" ref={charcoInicioRef} aria-hidden="true">
             <div className="galeria-goteo-wrap">
               <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
                 <defs>
@@ -528,11 +530,9 @@ export default function MenuPage() {
                 <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,22 300,22 C 283,22 279,11 262,11 C 244,11 238,32 216,32 C 194,32 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGrad)" />
               </svg>
             </div>
-          </section>
-
-          {/* zona de caída sobre el fondo claro de la página: más recorrido para que la gota tenga trayecto antes de llegar a la flecha */}
-          <div className="galeria-caida" aria-hidden="true">
-            <span className="galeria-gota" />
+            <div className="galeria-caida">
+              <span className="galeria-gota" />
+            </div>
           </div>
 
           {/* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */}
@@ -543,7 +543,7 @@ export default function MenuPage() {
             </div>
           </div>
 
-          {/* charco pegado al header: toma la posta cuando "Nuestra cocina" se pierde de vista y sigue goteando hasta el pie de página */}
+          {/* charco pegado al header: toma la posta apenas el header tapa el punto de origen, y sigue goteando hasta el pie de página */}
           {charcoViajeroVisible && (
             <div className="charco-viajero" style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }} aria-hidden="true">
               <span className="charco-gota-viajera" />
@@ -917,16 +917,16 @@ export default function MenuPage() {
         .barra-carrito-brillo { animation: barraEntrar 0.35s cubic-bezier(0.32,0.72,0,1), carrito-ilumina 3.6s ease-in-out infinite; }
         .barra-carrito-brillo .barra-carrito-icono { animation: carrito-icono-ilumina 3.6s ease-in-out infinite; }
         @keyframes carrito-ilumina {
-          0%, 62% { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
-          70%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 22px 7px rgba(240,98,62,0.55); }
-          84%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 22px 7px rgba(240,98,62,0.55); }
-          100%    { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          0%, 62%  { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          64%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 24px 8px rgba(240,98,62,0.65); }
+          68%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          100%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
         }
         @keyframes carrito-icono-ilumina {
-          0%, 62% { background: #F0623E; }
-          70%     { background: #F7B267; }
-          84%     { background: #F7B267; }
-          100%    { background: #F0623E; }
+          0%, 62%  { background: #F0623E; }
+          64%      { background: #F7B267; }
+          68%      { background: #F0623E; }
+          100%     { background: #F0623E; }
         }
 
         /* ── ESTADO ── */
@@ -1102,18 +1102,18 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
 
         /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        .galeria-seccion { position: relative; padding: 18px 0 0; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        .galeria-seccion { position: relative; padding: 18px 0 16px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
-        /* ── borde de queso/salsa derretida al pie de la foto ── */
-        .galeria-goteo-wrap { position: relative; height: 26px; z-index: 2; }
-        .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-        /* ── zona de caída sobre la página clara: le da recorrido a la gota antes de llegar a la flecha ── */
-        .galeria-caida { position: relative; height: 88px; overflow: visible; }
+        /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
+        .galeria-charco-local { position: relative; z-index: 2; background: transparent; }
+        .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
+        .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .galeria-caida { position: relative; height: 108px; overflow: visible; }
         .galeria-gota {
-          position: absolute; top: 0; left: 54%; width: 10px; height: 10px;
+          position: absolute; top: 0; left: 54%; width: 13px; height: 13px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
           box-shadow: 0 1px 3px rgba(178,58,30,0.35);
           border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
@@ -1122,16 +1122,16 @@ export default function MenuPage() {
         }
         @keyframes gota-cae {
           0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
-          52%  { transform: translateY(52px) scaleY(2.1); opacity: 1; }
-          64%  { transform: translateY(68px) scaleY(2.7); opacity: 0.9; }
-          72%  { opacity: 0; transform: translateY(72px) scaleY(2.7); }
-          100% { opacity: 0; transform: translateY(72px) scaleY(2.7); }
+          52%  { transform: translateY(66px) scaleY(2.1); opacity: 1; }
+          64%  { transform: translateY(88px) scaleY(2.7); opacity: 0.9; }
+          72%  { opacity: 0; transform: translateY(92px) scaleY(2.7); }
+          100% { opacity: 0; transform: translateY(92px) scaleY(2.7); }
         }
 
-        /* ── charco pegado al header: toma la posta apenas "Nuestra cocina" se pierde de vista y recorre toda la pantalla goteando, hasta el pie de página ── */
+        /* ── charco pegado al header: toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
         .charco-viajero { position: fixed; left: 50%; transform: translateX(-50%); width: 0; height: 0; z-index: 38; pointer-events: none; transition: top 0.2s ease; }
         .charco-gota-viajera {
-          position: absolute; top: 0; left: 0; width: 9px; height: 9px;
+          position: absolute; top: 0; left: 0; width: 12px; height: 12px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
           box-shadow: 0 1px 3px rgba(178,58,30,0.35);
           border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
@@ -1158,14 +1158,15 @@ export default function MenuPage() {
           position: absolute; bottom: -4px; width: 52px; height: 24px;
           background: radial-gradient(ellipse at center, rgba(240,98,62,0.45) 0%, rgba(247,178,103,0.28) 45%, rgba(240,98,62,0) 75%);
           border-radius: 50%; filter: blur(1.5px); pointer-events: none;
-          opacity: 0.4; transform: scale(0.9);
+          opacity: 0; transform: scale(0.85);
           animation: mancha-aparece 3.6s ease-in-out infinite;
         }
+        /* el brillo solo aparece en el instante exacto en que la gota toca (64% del ciclo, igual que gota-cae/charco-cae-viajero): ni antes ni después */
         @keyframes mancha-aparece {
-          0%, 62% { opacity: 0.4; transform: scale(0.9); }
-          70%     { opacity: 1; transform: scale(1.25); }
-          84%     { opacity: 0.55; transform: scale(1.05); }
-          100%    { opacity: 0.4; transform: scale(0.9); }
+          0%, 62%  { opacity: 0; transform: scale(0.85); }
+          64%      { opacity: 1; transform: scale(1.3); }
+          68%      { opacity: 0; transform: scale(0.95); }
+          100%     { opacity: 0; transform: scale(0.85); }
         }
         .galeria-flecha-abajo {
           position: relative; width: 40px; height: 40px; border-radius: 50%;
@@ -1175,10 +1176,10 @@ export default function MenuPage() {
           animation: flecha-ilumina 3.6s ease-in-out infinite;
         }
         @keyframes flecha-ilumina {
-          0%, 62% { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
-          70%     { background: #F0623E; box-shadow: 0 0 20px 6px rgba(240,98,62,0.65); color: #fff; }
-          84%     { background: #F0623E; box-shadow: 0 0 20px 6px rgba(240,98,62,0.65); color: #fff; }
-          100%    { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          0%, 62%  { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          64%      { background: #F0623E; box-shadow: 0 0 22px 8px rgba(240,98,62,0.7); color: #fff; }
+          68%      { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          100%     { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
         }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
