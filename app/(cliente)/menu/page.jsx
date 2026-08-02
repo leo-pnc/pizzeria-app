@@ -375,9 +375,6 @@ export default function MenuPage() {
               <span>
                 {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
               </span>
-              <button className="btn-ver-horarios" onClick={() => setModalHorarios(true)}>
-                Ver horarios
-              </button>
             </div>
           )}
 
@@ -415,6 +412,21 @@ export default function MenuPage() {
               Nuestra cocina
             </h2>
             <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
+
+            <div className="galeria-ubicacion">
+              <p className="galeria-direccion">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                San José, Guaymallén
+              </p>
+              <div className="galeria-ubicacion-botones">
+                {config?.latitud_local && (
+                  <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                    Cómo llegar
+                  </a>
+                )}
+                <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
+              </div>
+            </div>
           </div>
         </section>
       )}
@@ -521,36 +533,6 @@ export default function MenuPage() {
           </>
         )}
       </main>
-
-      {/* ── UBICACIÓN ── */}
-      <section className="ubicacion-seccion">
-        <div className="ubicacion-inner">
-          <div className="ubicacion-mapa">
-            <div className="ubicacion-mapa-patron" />
-            <div className="ubicacion-pin" />
-          </div>
-          <div className="ubicacion-datos">
-            <p className="ubicacion-direccion">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              San José, Guaymallén, Mendoza
-            </p>
-            {abierto !== null && (
-              <p className="ubicacion-horario">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                {abierto ? 'Abierto ahora' : proxApertura ? `Cerrado · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
-              </p>
-            )}
-            <div className="ubicacion-botones">
-              {config?.latitud_local && (
-                <a className="ubicacion-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                  Cómo llegar
-                </a>
-              )}
-              <button className="ubicacion-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ── FOOTER ── */}
       <footer className="footer">
@@ -810,19 +792,6 @@ export default function MenuPage() {
         .cerrado { color: #D94E2C; }
         .cerrado .estado-dot { background: #D94E2C; }
 
-        .btn-ver-horarios {
-          margin-left: auto;
-          background: transparent;
-          border: none;
-          color: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          text-decoration: underline;
-          cursor: pointer;
-          padding: 2px 0;
-          flex-shrink: 0;
-        }
-
         /* ── BUSCADOR ── */
         .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; transition: padding 0.2s ease; }
         .compacto .busq-wrap { padding-bottom: 8px; }
@@ -982,46 +951,38 @@ export default function MenuPage() {
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
 
-        /* ── GALERÍA: foto por foto, salto rápido y pausa ── */
-        .galeria-seccion { position: relative; background: #fff; border-bottom: 1px solid #ece6dc; padding: 20px 0 24px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        /* ── GALERÍA: foto por foto, salto rápido y pausa ── pensada para entrar en una sola pantalla ── */
+        .galeria-seccion { position: relative; background: #fff; border-bottom: 1px solid #ece6dc; padding: 14px 0 16px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        .galeria-blob { position: absolute; width: 240px; height: 240px; border-radius: 50%; background: #F0623E; opacity: 0.12; filter: blur(60px); top: -90px; right: -60px; animation: galeria-blob-mov 8s ease-in-out infinite; pointer-events: none; }
+        .galeria-blob { position: absolute; width: 220px; height: 220px; border-radius: 50%; background: #F0623E; opacity: 0.12; filter: blur(60px); top: -80px; right: -60px; animation: galeria-blob-mov 8s ease-in-out infinite; pointer-events: none; }
         @keyframes galeria-blob-mov { 0%,100%{ transform: translate(0,0) scale(1); } 33%{ transform: translate(-30px,26px) scale(1.2); } 66%{ transform: translate(20px,10px) scale(0.9); } }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
-        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
         .galeria-icono { display: flex; color: #F0623E; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
         @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
 
-        .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .galeria-slider-marco { width: 100%; max-width: 280px; aspect-ratio: 4/5; border-radius: 24px; overflow: hidden; box-shadow: 0 12px 30px rgba(34,32,28,0.16); background: #f3efe6; }
+        .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .galeria-slider-marco { width: 100%; max-width: 190px; aspect-ratio: 4/5; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 24px rgba(34,32,28,0.16); background: #f3efe6; }
         .galeria-slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.55s cubic-bezier(0.68,-0.1,0.27,1.15); }
         .galeria-slider-item { flex: 0 0 100%; height: 100%; border: none; padding: 0; margin: 0; cursor: pointer; background: none; }
         .galeria-slider-item img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-        .galeria-slider-puntos { display: flex; gap: 6px; }
-        .galeria-punto { width: 6px; height: 6px; border-radius: 50%; background: #e4dcc9; transition: width 0.3s ease, background 0.3s ease; }
-        .galeria-punto.activo { width: 20px; background: #F0623E; }
+        .galeria-slider-puntos { display: flex; gap: 5px; }
+        .galeria-punto { width: 5px; height: 5px; border-radius: 50%; background: #e4dcc9; transition: width 0.3s ease, background 0.3s ease; }
+        .galeria-punto.activo { width: 16px; background: #F0623E; }
+
+        .galeria-ubicacion { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ece6dc; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .galeria-direccion { display: flex; align-items: center; gap: 6px; color: #55504a; font-size: 12.5px; font-weight: 600; }
+        .galeria-direccion svg { color: #F0623E; flex-shrink: 0; }
+        .galeria-ubicacion-botones { display: flex; gap: 8px; width: 100%; max-width: 300px; }
+        .galeria-btn-primario { flex: 1; text-align: center; background: #F0623E; color: #fff; border: none; border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 700; text-decoration: none; transition: filter 0.15s; }
+        .galeria-btn-primario:hover { filter: brightness(1.08); }
+        .galeria-btn-secundario { flex: 1; background: transparent; color: #22201c; border: 1px solid #ece6dc; border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .galeria-btn-secundario:hover { background: #f3efe6; }
 
         @media (prefers-reduced-motion: reduce) {
           .galeria-slider-track { transition: none; }
           .galeria-icono, .galeria-blob { animation: none; }
         }
-
-        /* ── UBICACIÓN ── */
-        .ubicacion-seccion { padding: 4px 12px 22px; max-width: 760px; margin: 0 auto; }
-        .ubicacion-inner { background: #22201c; border-radius: 22px; overflow: hidden; }
-        .ubicacion-mapa { position: relative; height: 108px; background: #29261f; overflow: hidden; }
-        .ubicacion-mapa-patron { position: absolute; inset: 0; background-image: radial-gradient(#3a352c 1.5px, transparent 1.5px); background-size: 16px 16px; }
-        .ubicacion-pin { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; background: #F0623E; transform: translate(-50%, -100%) rotate(-45deg); box-shadow: 0 0 0 6px rgba(240,98,62,0.2); animation: pin-rebote 2.6s ease-in-out infinite; }
-        @keyframes pin-rebote { 0%,100%{ transform: translate(-50%, -100%) rotate(-45deg); } 50%{ transform: translate(-50%, -110%) rotate(-45deg); } }
-        .ubicacion-datos { padding: 16px 18px 18px; }
-        .ubicacion-direccion { display: flex; align-items: center; gap: 8px; color: #fffbf5; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-        .ubicacion-direccion svg { color: #F0623E; flex-shrink: 0; }
-        .ubicacion-horario { display: flex; align-items: center; gap: 8px; color: #a39c8f; font-size: 12.5px; margin-bottom: 14px; }
-        .ubicacion-horario svg { color: #d9a534; flex-shrink: 0; }
-        .ubicacion-botones { display: flex; gap: 8px; }
-        .ubicacion-btn-primario { flex: 1; text-align: center; background: #F0623E; color: #fff; border: none; border-radius: 12px; padding: 11px; font-size: 13px; font-weight: 700; text-decoration: none; transition: filter 0.15s; }
-        .ubicacion-btn-primario:hover { filter: brightness(1.08); }
-        .ubicacion-btn-secundario { flex: 1; background: transparent; color: #fffbf5; border: 1px solid #3a352c; border-radius: 12px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
         /* ── FOOTER ── */
         .footer { background: #22201c; color: #d8d2c8; margin-top: 0; }
