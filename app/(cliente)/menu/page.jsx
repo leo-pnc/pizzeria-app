@@ -8,27 +8,62 @@ import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAv
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-// ── Galería "foto por foto": mazo apilado, la de adelante sale volando y pasa la siguiente ──
+// ── Galería "foto por foto": mazo apilado, se puede deslizar con el dedo o avanza sola ──
 function GaleriaCocina({ fotos, onSelect }) {
   const [idx, setIdx] = useState(0);
   const [saliendo, setSaliendo] = useState(false);
   const [sinTransicion, setSinTransicion] = useState(false);
+  const [arrastreX, setArrastreX] = useState(0);
+  const arrastrando = useRef(false);
+  const inicioX = useRef(0);
+  const fueArrastre = useRef(false);
+  const timerRef = useRef(null);
+
+  function programarSiguiente() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (fotos.length <= 1) return;
+    timerRef.current = setInterval(() => avanzar(), 3000);
+  }
 
   useEffect(() => {
-    if (fotos.length <= 1) return;
-    const ciclo = setInterval(() => {
-      setSaliendo(true);
-      setTimeout(() => {
-        setSinTransicion(true);
-        setIdx(prev => (prev + 1) % fotos.length);
-        setSaliendo(false);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => setSinTransicion(false));
-        });
-      }, 480);
-    }, 3000);
-    return () => clearInterval(ciclo);
+    programarSiguiente();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [fotos.length]);
+
+  function avanzar() {
+    setSaliendo(true);
+    setTimeout(() => {
+      setSinTransicion(true);
+      setIdx(prev => (prev + 1) % fotos.length);
+      setSaliendo(false);
+      setArrastreX(0);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setSinTransicion(false));
+      });
+    }, 480);
+  }
+
+  function manejarInicio(clientX) {
+    arrastrando.current = true;
+    fueArrastre.current = false;
+    inicioX.current = clientX;
+  }
+  function manejarMovimiento(clientX) {
+    if (!arrastrando.current) return;
+    const delta = clientX - inicioX.current;
+    if (Math.abs(delta) > 6) fueArrastre.current = true;
+    setArrastreX(delta);
+  }
+  function manejarFin() {
+    if (!arrastrando.current) return;
+    arrastrando.current = false;
+    if (Math.abs(arrastreX) > 55 && fotos.length > 1) {
+      programarSiguiente();
+      avanzar();
+    } else {
+      setArrastreX(0);
+    }
+  }
 
   if (!fotos.length) return null;
   const len = fotos.length;
@@ -38,14 +73,21 @@ function GaleriaCocina({ fotos, onSelect }) {
 
   return (
     <div className="galeria-slider">
-      <div className="galeria-stack">
+      <div
+        className="galeria-stack"
+        onPointerDown={e => manejarInicio(e.clientX)}
+        onPointerMove={e => manejarMovimiento(e.clientX)}
+        onPointerUp={manejarFin}
+        onPointerLeave={manejarFin}
+      >
         {visibles.slice().reverse().map(({ foto, indiceReal, pos }) => (
           <button
             key={foto.id}
             className={`galeria-carta galeria-carta-p${pos} ${saliendo && pos === 0 ? 'galeria-carta-sale' : ''} ${sinTransicion ? 'galeria-sin-transicion' : ''}`}
-            onClick={() => onSelect(indiceReal)}
+            style={pos === 0 && arrastreX !== 0 ? { transform: `translateX(${arrastreX}px) rotate(${arrastreX / 18}deg)`, transition: 'none' } : undefined}
+            onClick={() => { if (!fueArrastre.current) onSelect(indiceReal); }}
           >
-            <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+            <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} draggable="false" />
           </button>
         ))}
       </div>
@@ -409,6 +451,7 @@ export default function MenuPage() {
         <section className="galeria-seccion">
           <div className="galeria-fondo" />
           <div className="galeria-overlay" />
+          <div className="galeria-fundido" />
           <div className="galeria-inner">
             <h2 className="galeria-titulo">
               <span className="galeria-icono">
@@ -957,19 +1000,21 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
 
         /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        .galeria-seccion { position: relative; border-bottom: 1px solid rgba(0,0,0,0.1); padding: 18px 0 20px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        .galeria-seccion { position: relative; padding: 18px 0 20px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 65%; filter: blur(5px) brightness(0.65) saturate(1.1); transform: scale(1.08); z-index: 0; }
-        .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 70%, rgba(18,12,7,0.88) 100%); z-index: 0; }
+        .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
+        .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
+        .galeria-fundido { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; background: linear-gradient(180deg, transparent 0%, #fffbf5 100%); z-index: 1; pointer-events: none; }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         .galeria-icono { display: flex; color: #F0956F; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
         @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
 
         .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; }
-        .galeria-carta { position: absolute; inset: 0; border: none; padding: 0; margin: 0; cursor: pointer; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 12px 26px rgba(0,0,0,0.35); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; }
-        .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+        .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
+        .galeria-carta { position: absolute; inset: 0; border: none; padding: 0; margin: 0; cursor: grab; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 12px 26px rgba(0,0,0,0.35); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
+        .galeria-carta:active { cursor: grabbing; }
+        .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; -webkit-user-select: none; user-select: none; }
         .galeria-carta-p0 { transform: translateY(0) scale(1); z-index: 3; }
         .galeria-carta-p1 { transform: translateY(16px) scale(0.93); z-index: 2; opacity: 0.85; }
         .galeria-carta-p2 { transform: translateY(28px) scale(0.86); z-index: 1; opacity: 0.55; }
