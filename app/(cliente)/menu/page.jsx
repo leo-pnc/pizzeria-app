@@ -476,15 +476,16 @@ export default function MenuPage() {
             </div>
           </div>
 
-          {/* goteo tipo queso derretido que conecta con la página de abajo */}
+          {/* goteo tipo queso/salsa derretida que conecta con la página de abajo, ya despegado de los botones */}
           <div className="galeria-goteo-wrap">
-            <svg className="galeria-goteo-svg" viewBox="0 0 400 46" preserveAspectRatio="none">
-              <path d="M0,0 L400,0 L400,14 C 385,14 380,26 366,26 C 352,26 348,15 334,15 C 318,15 313,34 296,34 C 279,34 275,17 258,17 C 240,17 233,42 214,42 C 195,42 190,19 172,19 C 155,19 150,32 134,32 C 118,32 114,16 98,16 C 82,16 77,29 60,29 C 44,29 40,15 24,15 C 14,15 8,16 0,20 Z" fill="#fffbf5" />
+            <svg className="galeria-goteo-svg" viewBox="0 0 400 52" preserveAspectRatio="none">
+              <path d="M0,0 L400,0 L400,14 C 385,14 381,24 368,24 C 355,24 351,14 338,14 C 322,14 317,30 300,30 C 283,30 279,15 262,15 C 244,15 238,44 216,44 C 194,44 189,17 170,17 C 152,17 147,28 130,28 C 113,28 109,14 92,14 C 75,14 70,26 52,26 C 35,26 31,13 15,13 C 7,13 3,14 0,17 Z" fill="#fffbf5" />
             </svg>
-            <div className="galeria-gota" />
+            <span className="galeria-gota" />
           </div>
 
           <div className="galeria-flecha-wrap">
+            <span className="galeria-mancha" aria-hidden="true" />
             <button className="galeria-flecha-abajo" onClick={() => document.querySelector('.main')?.scrollIntoView({ behavior: 'smooth' })} aria-label="Seguir bajando">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
@@ -1013,11 +1014,54 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
 
         /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        .galeria-seccion { position: relative; padding: 18px 0 20px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        .galeria-seccion { position: relative; padding: 18px 0 6px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
-        .galeria-fundido { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; background: linear-gradient(180deg, transparent 0%, #fffbf5 100%); z-index: 1; pointer-events: none; }
+        /* ── goteo tipo queso/salsa derretida + gota que cae y enciende la flecha ── */
+        .galeria-goteo-wrap { position: relative; height: 30px; margin-top: 0; z-index: 2; }
+        .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .galeria-gota {
+          position: absolute; top: 26px; left: 54%; width: 8px; height: 8px;
+          background: #fffbf5; border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
+          transform-origin: top center;
+          animation: gota-cae 3.4s cubic-bezier(0.55,0,0.85,0.35) infinite;
+        }
+        @keyframes gota-cae {
+          0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
+          48%  { transform: translateY(28px) scaleY(1.9); opacity: 1; }
+          60%  { transform: translateY(38px) scaleY(2.5); opacity: 0.9; }
+          68%  { opacity: 0; transform: translateY(40px) scaleY(2.5); }
+          100% { opacity: 0; transform: translateY(40px) scaleY(2.5); }
+        }
+        .galeria-flecha-wrap { position: relative; display: flex; justify-content: center; margin: 0 0 10px; z-index: 2; }
+        .galeria-mancha {
+          position: absolute; top: -8px; width: 48px; height: 22px;
+          background: radial-gradient(ellipse at center, rgba(240,98,62,0.55) 0%, rgba(240,98,62,0) 72%);
+          border-radius: 50%; opacity: 0; filter: blur(1px); pointer-events: none;
+          animation: mancha-aparece 3.4s ease-in-out infinite;
+        }
+        @keyframes mancha-aparece {
+          0%, 58% { opacity: 0; transform: scale(0.6); }
+          66%     { opacity: 1; transform: scale(1.1); }
+          80%     { opacity: 0.45; transform: scale(1); }
+          100%    { opacity: 0; transform: scale(1); }
+        }
+        .galeria-flecha-abajo {
+          width: 38px; height: 38px; border-radius: 50%; border: none;
+          background: rgba(255,251,245,0.14); color: #fffbf5; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+          transition: transform 0.15s;
+          animation: flecha-ilumina 3.4s ease-in-out infinite;
+        }
+        .galeria-flecha-abajo:hover { transform: translateY(2px); }
+        @keyframes flecha-ilumina {
+          0%, 58% { background: rgba(255,251,245,0.14); box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #fffbf5; }
+          66%     { background: #F0623E; box-shadow: 0 0 20px 5px rgba(240,98,62,0.7); color: #fff; }
+          80%     { background: #F0623E; box-shadow: 0 0 20px 5px rgba(240,98,62,0.7); color: #fff; }
+          100%    { background: rgba(255,251,245,0.14); box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #fffbf5; }
+        }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         .galeria-icono { display: flex; color: #F0956F; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
@@ -1034,7 +1078,7 @@ export default function MenuPage() {
         .galeria-carta-sale { transition: transform 0.48s cubic-bezier(0.5,-0.2,0.7,0.4), opacity 0.4s ease 0.15s; transform: translate(130%,-10%) rotate(16deg) scale(0.92) !important; opacity: 0 !important; z-index: 4 !important; }
         .galeria-sin-transicion { transition: none !important; }
 
-        .galeria-ubicacion { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.18); display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .galeria-ubicacion { margin-top: 12px; padding-top: 12px; padding-bottom: 6px; border-top: 1px solid rgba(255,255,255,0.18); display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .galeria-direccion { display: flex; align-items: center; gap: 6px; color: #fffbf5; font-size: 12.5px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
         .galeria-direccion svg { color: #F0956F; flex-shrink: 0; }
         .galeria-ubicacion-botones { display: flex; gap: 8px; width: 100%; max-width: 300px; }
@@ -1046,6 +1090,7 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
+          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo { animation: none; }
         }
 
         /* ── FOOTER ── */
