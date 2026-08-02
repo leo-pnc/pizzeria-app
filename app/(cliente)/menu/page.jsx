@@ -108,7 +108,7 @@ export default function MenuPage() {
   const [toast, setToast]                 = useState(null);
   const [modalReapertura, setModalReapertura] = useState(false);
   const [modalHorarios, setModalHorarios]     = useState(false);
-  const [headerCompacto, setHeaderCompacto]   = useState(false);
+  const [scrolled, setScrolled]           = useState(false);
   const horariosRef = useRef([]);
   const franjasRef  = useRef([]);
   const configRef   = useRef(null);
@@ -127,15 +127,14 @@ export default function MenuPage() {
   const [carritoAnimDelay, setCarritoAnimDelay] = useState('0ms');
   const footerRef    = useRef(null);
   const stickyTopRef = useRef(null);
-  const sentinelRef  = useRef(null);
+  const heroRef       = useRef(null);
 
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
 
-  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header".
-  // Se calcula en el propio scroll (no con un IntersectionObserver) porque la altura del header cambia todo el tiempo
-  // mientras se comprime, y recrear el observer en cada cambio de altura lo dejaba sin tiempo de reportar nada.
+  // El charco vive junto a la foto mientras ese punto esté debajo de la barra sticky; en cuanto la barra lo tapa, salta a modo "pegado al header".
+  // Se calcula en el propio scroll (no con un IntersectionObserver) para reevaluar en cada frame contra la altura actual de la barra.
   const headerAlturaRef = useRef(72);
   useEffect(() => { headerAlturaRef.current = headerAltura; }, [headerAltura]);
 
@@ -151,7 +150,7 @@ export default function MenuPage() {
     return () => obs.disconnect();
   }, [galeria.length, categoriaActiva, busqueda]);
 
-  // Sigue la altura REAL del header en todo momento (incluso mientras se comprime con su transición CSS al hacer scroll),
+  // Sigue la altura REAL de la barra sticky (ahora constante, pero puede variar por resize/orientación/breakpoints),
   // para que el charco quede anclado exactamente a la altura del buscador y nunca se desfase
   useEffect(() => {
     const el = stickyTopRef.current;
@@ -171,18 +170,16 @@ export default function MenuPage() {
     return () => { ro.disconnect(); window.removeEventListener('resize', alRedimensionar); };
   }, []);
 
-  // Comprimir el header cuando el usuario empieza a explorar el menú.
-  // En vez de medir window.scrollY en cada scroll (un valor que puede quedar afectado por el propio
-  // cambio de tamaño del header al comprimirse, generando un loop de comprimir/descomprimir sin parar),
-  // se usa un sentinel invisible y fijo al principio de la página: cuando ese punto fijo sale de la
-  // pantalla, se comprime; cuando vuelve a entrar, se descomprime. Al no depender del tamaño del header,
-  // no hay forma de que se retroalimente con su propia animación.
+  // El header ya no cambia de tamaño con JS: la parte "de más" (subtítulo + estado) vive en el flujo normal
+  // de la página y se va con el scroll de forma nativa. Lo único que queda atado a un IntersectionObserver
+  // es un detalle puramente cosmético (la sombra de la barra sticky), que no afecta ningún layout — por eso
+  // no hay forma de que se retroalimente con nada.
   useEffect(() => {
-    const el = sentinelRef.current;
+    const el = heroRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => setHeaderCompacto(!entry.isIntersecting),
-      { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '0px' }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -444,9 +441,7 @@ export default function MenuPage() {
   const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
   const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
 
-  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header".
-  // Se calcula en el propio scroll (no con un IntersectionObserver) porque la altura del header cambia todo el tiempo
-  // mientras se comprime, y recrear el observer en cada cambio de altura lo dejaba sin tiempo de reportar nada.
+  // El charco vive junto a la foto mientras ese punto esté debajo de la barra sticky; en cuanto la barra lo tapa, salta a modo "pegado al header".
   useEffect(() => {
     if (!mostrarCharco) { setFlechaVisible(true); return; }
     let ticking = false;
@@ -486,19 +481,30 @@ export default function MenuPage() {
   return (
     <div className="pagina">
 
-      {/* punto de referencia fijo (no cambia de tamaño ni de posición): decide cuándo comprimir el header, sin depender de la altura del propio header */}
-      <div ref={sentinelRef} className="scroll-sentinel" aria-hidden="true" />
+      {/* ── HERO: subtítulo + estado. Vive en el flujo normal de la página (no es sticky), así que se va con el scroll
+           de forma 100% nativa del navegador, sin ningún JS que decida "cuándo". Esto es lo que hace que arriba del todo
+           se vea el header "expandido" y, apenas se hace scroll, se vea "comprimido" — sin posibilidad de parpadeos
+           ni loops, porque no hay ningún estado de React decidiendo el tamaño de nada. ── */}
+      <div className="header-hero" ref={heroRef}>
+        <span className="header-hero-sub">Pizzería · San José, Guaymallén, Mendoza</span>
+        {abierto !== null && (
+          <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
+            <span className="estado-dot" />
+            <span>
+              {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* ── HEADER ── */}
-      <div className={`sticky-top ${headerCompacto ? 'compacto' : ''}`} ref={stickyTopRef}>
+      {/* ── BARRA STICKY: tamaño siempre constante (nunca anima su layout), por eso no puede retroalimentarse con el scroll.
+           Lo único que cambia al scrollear es una sombra (puramente cosmética, no afecta el tamaño de nada). ── */}
+      <div className={`sticky-top ${scrolled ? 'con-sombra' : ''}`} ref={stickyTopRef}>
         <header className="header">
           <div className="header-inner">
             <div className="header-marca">
               <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
-              <div className="header-textos">
-                <h1 className="header-nombre">Don Adriano's</h1>
-                <span className="header-sub">Pizzería · San José, Guaymallén, Mendoza</span>
-              </div>
+              <h1 className="header-nombre">Don Adriano's</h1>
             </div>
 
             <div className="header-acciones">
@@ -512,15 +518,6 @@ export default function MenuPage() {
               </a>
             </div>
           </div>
-
-          {abierto !== null && (
-            <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
-              <span className="estado-dot" />
-              <span>
-                {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
-              </span>
-            </div>
-          )}
 
           <div className="busq-wrap">
             <div className="busq-inner">
@@ -944,21 +941,19 @@ export default function MenuPage() {
 
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
-        /* ── HEADER ── */
-        .scroll-sentinel { position: relative; height: 1px; margin-bottom: -1px; pointer-events: none; }
-        .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.9); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); transition: box-shadow 0.25s ease, background 0.25s ease; }
-        .sticky-top.compacto { box-shadow: 0 2px 14px rgba(0,0,0,0.08); background: rgba(255,251,245,0.96); }
+        /* ── HERO: subtítulo + estado. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
+        .header-hero { max-width: 760px; margin: 0 auto; padding: 6px 16px 0; }
+        .header-hero-sub { display: block; font-size: 11px; color: #8a8378; padding: 6px 0 2px; }
+
+        /* ── BARRA STICKY: tamaño siempre constante, nunca anima layout. Solo cambia una sombra cosmética ── */
+        .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.96); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); transition: box-shadow 0.25s ease; }
+        .sticky-top.con-sombra { box-shadow: 0 2px 14px rgba(0,0,0,0.08); }
 
         .header { border-bottom: 1px solid rgba(236,230,220,0.7); }
-        .header-inner { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: padding 0.25s ease; }
-        .compacto .header-inner { padding: 8px 16px; }
+        .header-inner { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .header-marca { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
-        .header-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; transition: width 0.25s ease, height 0.25s ease; }
-        .compacto .header-logo { width: 30px; height: 30px; }
-        .header-textos { min-width: 0; overflow: hidden; }
-        .header-nombre { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #E0562F; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header-sub { font-size: 11px; color: #8a8378; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 16px; opacity: 1; transition: max-height 0.2s ease, opacity 0.15s ease, margin 0.2s ease; }
-        .compacto .header-sub { max-height: 0; opacity: 0; margin-top: 0; }
+        .header-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; }
+        .header-nombre { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #E0562F; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
         .btn-consulta { display: flex; align-items: center; gap: 6px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter 0.15s; }
@@ -999,8 +994,7 @@ export default function MenuPage() {
         }
 
         /* ── ESTADO ── */
-        .estado-bar { max-width: 760px; margin: 0 auto; padding: 6px 16px 10px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; max-height: 30px; opacity: 1; overflow: hidden; transition: max-height 0.2s ease, opacity 0.15s ease, padding 0.2s ease; }
-        .compacto .estado-bar { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+        .estado-bar { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; padding: 4px 0 8px; }
         .estado-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
         .abierto { color: #3c8261; }
         .abierto .estado-dot { background: #3c8261; box-shadow: 0 0 0 3px rgba(61,74,47,0.15); animation: pulso-verde 2s infinite; }
@@ -1011,8 +1005,7 @@ export default function MenuPage() {
         .cerrado .estado-dot { background: #D94E2C; }
 
         /* ── BUSCADOR ── */
-        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; transition: padding 0.2s ease; }
-        .compacto .busq-wrap { padding-bottom: 8px; }
+        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 10px; }
         .busq-inner { position: relative; }
         .busq-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8a8378; pointer-events: none; }
         .busq-input { width: 100%; background: #f3efe6; border: 1.5px solid #ece6dc; border-radius: 10px; padding: 10px 36px; font-size: 14px; color: #22201c; font-family: inherit; outline: none; transition: border-color 0.15s; }
@@ -1025,7 +1018,6 @@ export default function MenuPage() {
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-nav-inner { display: flex; gap: 8px; max-width: 760px; margin: 0 auto; padding: 10px 12px; white-space: nowrap; }
         .cat-btn { background: #f3efe6; border: none; border-radius: 20px; color: #6b6255; padding: 9px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
-        .compacto .cat-btn { padding: 7px 14px; }
         .cat-btn:hover { background: #ece2d0; color: #22201c; }
         .cat-btn.activo { background: #22201c; color: #fffbf5; font-weight: 700; transform: scale(1.04); box-shadow: 0 4px 12px rgba(34,32,28,0.2); }
         .seccion-count { font-size: 11.5px; font-weight: 500; color: #b0a898; margin-left: auto; }
@@ -1318,7 +1310,7 @@ export default function MenuPage() {
         .lightbox-desc { color: #fff; font-size: 13px; text-align: center; max-width: 400px; }
 
         @media (max-width: 380px) {
-          .header-sub { display: none; }
+          .header-hero-sub { display: none; }
           .btn-consulta-txt { display: none; }
           .btn-consulta { padding: 9px; }
         }
