@@ -171,14 +171,30 @@ export default function MenuPage() {
   }, []);
 
   // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
+  // Usa histéresis (un umbral distinto para activar y para desactivar) + un pequeño tiempo mínimo entre cambios,
+  // para que una oscilación chica de scrollY cerca del umbral (rebote elástico, barra del navegador colapsando, etc.)
+  // no dispare un loop de comprimir/descomprimir sin parar.
   useEffect(() => {
     let ticking = false;
+    let ultimoCambio = 0;
+    const UMBRAL_ENTRAR = 64; // por encima de esto, se comprime
+    const UMBRAL_SALIR  = 20; // por debajo de esto, se descomprime
+    const COOLDOWN_MS   = 180;
+
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        setHeaderCompacto(window.scrollY > 28);
         ticking = false;
+        const y = window.scrollY;
+        const ahora = performance.now();
+        if (ahora - ultimoCambio < COOLDOWN_MS) return;
+
+        setHeaderCompacto(prev => {
+          if (!prev && y > UMBRAL_ENTRAR) { ultimoCambio = ahora; return true; }
+          if (prev && y < UMBRAL_SALIR)   { ultimoCambio = ahora; return false; }
+          return prev;
+        });
       });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
