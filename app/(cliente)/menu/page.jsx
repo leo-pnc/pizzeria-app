@@ -118,10 +118,24 @@ export default function MenuPage() {
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
+  const [flechaVisible, setFlechaVisible] = useState(false);
+  const galeriaSeccionRef = useRef(null);
 
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
+
+  // Muestra la flecha "pegada" al borde inferior de la pantalla solo mientras la sección de la cocina está a la vista
+  useEffect(() => {
+    const el = galeriaSeccionRef.current;
+    if (!el) { setFlechaVisible(false); return; }
+    const obs = new IntersectionObserver(
+      ([entry]) => setFlechaVisible(entry.isIntersecting),
+      { threshold: 0.2 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [galeria.length, categoriaActiva, busqueda]);
 
   // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
   useEffect(() => {
@@ -433,64 +447,77 @@ export default function MenuPage() {
           </div>
         </header>
 
-        {!enBusqueda && (
-          <nav className="cat-nav">
-            <div className="cat-nav-inner">
-              {todasCats.map(cat => (
-                <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
-                  {cat.nombre}
-                </button>
-              ))}
-            </div>
-          </nav>
-        )}
       </div>
 
       {/* ── GALERÍA: foto por foto, salto rápido y pausa ── solo se ve en "Todo" ── */}
       {galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda && (
-        <section className="galeria-seccion">
-          <div className="galeria-fondo" />
-          <div className="galeria-overlay" />
-          <div className="galeria-inner">
-            <h2 className="galeria-titulo">
-              <span className="galeria-icono">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
-              </span>
-              Nuestra cocina
-            </h2>
-            <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
+        <>
+          <section className="galeria-seccion" ref={galeriaSeccionRef}>
+            <div className="galeria-fondo" />
+            <div className="galeria-overlay" />
+            <div className="galeria-inner">
+              <h2 className="galeria-titulo">
+                <span className="galeria-icono">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
+                </span>
+                Nuestra cocina
+              </h2>
+              <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
 
-            <div className="galeria-ubicacion">
-              <p className="galeria-direccion">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                San José, Guaymallén
-              </p>
-              <div className="galeria-ubicacion-botones">
-                {config?.latitud_local && (
-                  <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                    Cómo llegar
-                  </a>
-                )}
-                <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
+              <div className="galeria-ubicacion">
+                <p className="galeria-direccion">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  San José, Guaymallén
+                </p>
+                <div className="galeria-ubicacion-botones">
+                  {config?.latitud_local && (
+                    <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                      Cómo llegar
+                    </a>
+                  )}
+                  <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* goteo tipo queso/salsa derretida que conecta con la página de abajo, ya despegado de los botones */}
-          <div className="galeria-goteo-wrap">
-            <svg className="galeria-goteo-svg" viewBox="0 0 400 52" preserveAspectRatio="none">
-              <path d="M0,0 L400,0 L400,14 C 385,14 381,24 368,24 C 355,24 351,14 338,14 C 322,14 317,30 300,30 C 283,30 279,15 262,15 C 244,15 238,44 216,44 C 194,44 189,17 170,17 C 152,17 147,28 130,28 C 113,28 109,14 92,14 C 75,14 70,26 52,26 C 35,26 31,13 15,13 C 7,13 3,14 0,17 Z" fill="#fffbf5" />
-            </svg>
+            {/* borde de queso/salsa derretida colgando del final de la foto, en los mismos tonos cálidos que la flecha */}
+            <div className="galeria-goteo-wrap">
+              <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="quesoGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F7B267" />
+                    <stop offset="100%" stopColor="#F0623E" />
+                  </linearGradient>
+                </defs>
+                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,22 300,22 C 283,22 279,11 262,11 C 244,11 238,32 216,32 C 194,32 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGrad)" />
+              </svg>
+            </div>
+          </section>
+
+          {/* zona de caída sobre el fondo claro de la página: más recorrido para que la gota tenga trayecto antes de llegar a la flecha */}
+          <div className="galeria-caida" aria-hidden="true">
             <span className="galeria-gota" />
           </div>
 
-          <div className="galeria-flecha-wrap">
+          <div className={`galeria-flecha-fixed ${flechaVisible && cantidad === 0 ? 'flecha-visible' : ''}`}>
             <span className="galeria-mancha" aria-hidden="true" />
             <button className="galeria-flecha-abajo" onClick={() => document.querySelector('.main')?.scrollIntoView({ behavior: 'smooth' })} aria-label="Seguir bajando">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </div>
-        </section>
+        </>
+      )}
+
+      {!enBusqueda && (
+        <nav className="cat-nav cat-nav-abajo">
+          <div className="cat-nav-inner">
+            {todasCats.map(cat => (
+              <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
+                {cat.nombre}
+              </button>
+            ))}
+          </div>
+        </nav>
       )}
 
       <main className="main">
@@ -865,6 +892,7 @@ export default function MenuPage() {
 
         /* ── NAV CATEGORÍAS ── */
         .cat-nav { border-bottom: 1px solid rgba(236,230,220,0.7); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .cat-nav-abajo { background: #fffbf5; border-top: 1px solid rgba(236,230,220,0.7); }
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-nav-inner { display: flex; gap: 8px; max-width: 760px; margin: 0 auto; padding: 10px 12px; white-space: nowrap; }
         .cat-btn { background: #f3efe6; border: none; border-radius: 20px; color: #6b6255; padding: 9px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
@@ -1018,49 +1046,63 @@ export default function MenuPage() {
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
-        /* ── goteo tipo queso/salsa derretida + gota que cae y enciende la flecha ── */
-        .galeria-goteo-wrap { position: relative; height: 30px; margin-top: 0; z-index: 2; }
+        /* ── borde de queso/salsa derretida al pie de la foto ── */
+        .galeria-goteo-wrap { position: relative; height: 26px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+        /* ── zona de caída sobre la página clara: le da recorrido a la gota antes de llegar a la flecha ── */
+        .galeria-caida { position: relative; height: 88px; overflow: visible; }
         .galeria-gota {
-          position: absolute; top: 26px; left: 54%; width: 8px; height: 8px;
-          background: #fffbf5; border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
+          position: absolute; top: 0; left: 54%; width: 10px; height: 10px;
+          background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
+          box-shadow: 0 1px 3px rgba(178,58,30,0.35);
+          border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
           transform-origin: top center;
-          animation: gota-cae 3.4s cubic-bezier(0.55,0,0.85,0.35) infinite;
+          animation: gota-cae 3.6s cubic-bezier(0.55,0,0.85,0.35) infinite;
         }
         @keyframes gota-cae {
           0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
-          48%  { transform: translateY(28px) scaleY(1.9); opacity: 1; }
-          60%  { transform: translateY(38px) scaleY(2.5); opacity: 0.9; }
-          68%  { opacity: 0; transform: translateY(40px) scaleY(2.5); }
-          100% { opacity: 0; transform: translateY(40px) scaleY(2.5); }
+          52%  { transform: translateY(52px) scaleY(2.1); opacity: 1; }
+          64%  { transform: translateY(68px) scaleY(2.7); opacity: 0.9; }
+          72%  { opacity: 0; transform: translateY(72px) scaleY(2.7); }
+          100% { opacity: 0; transform: translateY(72px) scaleY(2.7); }
         }
-        .galeria-flecha-wrap { position: relative; display: flex; justify-content: center; margin: 0 0 10px; z-index: 2; }
+
+        /* ── flecha pegada al borde inferior de la pantalla mientras "Nuestra cocina" está a la vista ── */
+        .galeria-flecha-fixed {
+          position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 40; opacity: 0; pointer-events: none;
+          transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .galeria-flecha-fixed.flecha-visible { opacity: 1; pointer-events: auto; }
         .galeria-mancha {
-          position: absolute; top: -8px; width: 48px; height: 22px;
-          background: radial-gradient(ellipse at center, rgba(240,98,62,0.55) 0%, rgba(240,98,62,0) 72%);
-          border-radius: 50%; opacity: 0; filter: blur(1px); pointer-events: none;
-          animation: mancha-aparece 3.4s ease-in-out infinite;
+          position: absolute; bottom: -4px; width: 52px; height: 24px;
+          background: radial-gradient(ellipse at center, rgba(240,98,62,0.45) 0%, rgba(247,178,103,0.28) 45%, rgba(240,98,62,0) 75%);
+          border-radius: 50%; filter: blur(1.5px); pointer-events: none;
+          opacity: 0.4; transform: scale(0.9);
+          animation: mancha-aparece 3.6s ease-in-out infinite;
         }
         @keyframes mancha-aparece {
-          0%, 58% { opacity: 0; transform: scale(0.6); }
-          66%     { opacity: 1; transform: scale(1.1); }
-          80%     { opacity: 0.45; transform: scale(1); }
-          100%    { opacity: 0; transform: scale(1); }
+          0%, 62% { opacity: 0.4; transform: scale(0.9); }
+          70%     { opacity: 1; transform: scale(1.25); }
+          84%     { opacity: 0.55; transform: scale(1.05); }
+          100%    { opacity: 0.4; transform: scale(0.9); }
         }
         .galeria-flecha-abajo {
-          width: 38px; height: 38px; border-radius: 50%; border: none;
-          background: rgba(255,251,245,0.14); color: #fffbf5; cursor: pointer;
+          position: relative; width: 40px; height: 40px; border-radius: 50%; border: none;
+          background: #fffbf5; color: #F0623E; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           box-shadow: 0 4px 14px rgba(0,0,0,0.22);
           transition: transform 0.15s;
-          animation: flecha-ilumina 3.4s ease-in-out infinite;
+          animation: flecha-ilumina 3.6s ease-in-out infinite;
         }
         .galeria-flecha-abajo:hover { transform: translateY(2px); }
         @keyframes flecha-ilumina {
-          0%, 58% { background: rgba(255,251,245,0.14); box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #fffbf5; }
-          66%     { background: #F0623E; box-shadow: 0 0 20px 5px rgba(240,98,62,0.7); color: #fff; }
-          80%     { background: #F0623E; box-shadow: 0 0 20px 5px rgba(240,98,62,0.7); color: #fff; }
-          100%    { background: rgba(255,251,245,0.14); box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #fffbf5; }
+          0%, 62% { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          70%     { background: #F0623E; box-shadow: 0 0 20px 6px rgba(240,98,62,0.65); color: #fff; }
+          84%     { background: #F0623E; box-shadow: 0 0 20px 6px rgba(240,98,62,0.65); color: #fff; }
+          100%    { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
         }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
