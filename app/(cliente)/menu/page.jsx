@@ -119,7 +119,12 @@ export default function MenuPage() {
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
   const [flechaVisible, setFlechaVisible] = useState(false);
+  const [finPaginaVisible, setFinPaginaVisible] = useState(false);
+  const [headerAltura, setHeaderAltura] = useState(72);
+  const [recorridoCharco, setRecorridoCharco] = useState(500);
   const galeriaSeccionRef = useRef(null);
+  const footerRef    = useRef(null);
+  const stickyTopRef = useRef(null);
 
   const navRef      = useRef(null);
 
@@ -136,6 +141,31 @@ export default function MenuPage() {
     obs.observe(el);
     return () => obs.disconnect();
   }, [galeria.length, categoriaActiva, busqueda]);
+
+  // Detecta cuando se llega al final de la página (footer) para que el charco y la flecha guía desaparezcan ahí
+  useEffect(() => {
+    const el = footerRef.current;
+    if (!el) { setFinPaginaVisible(false); return; }
+    const obs = new IntersectionObserver(
+      ([entry]) => setFinPaginaVisible(entry.isIntersecting),
+      { threshold: 0.01 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [galeria.length, categoriaActiva, busqueda]);
+
+  // Mide la altura real del header pegajoso para anclar el charco justo debajo, y cuánto recorrido de pantalla le queda
+  useEffect(() => {
+    function medir() {
+      const altura = stickyTopRef.current?.offsetHeight || 72;
+      setHeaderAltura(altura);
+      setRecorridoCharco(Math.max(160, window.innerHeight - altura - 90));
+    }
+    medir();
+    window.addEventListener('resize', medir);
+    const t = setTimeout(medir, 300);
+    return () => { window.removeEventListener('resize', medir); clearTimeout(t); };
+  }, [headerCompacto, abierto]);
 
   // Comprimir el header cuando el usuario empieza a explorar el menú (scroll)
   useEffect(() => {
@@ -402,11 +432,17 @@ export default function MenuPage() {
     ...categorias.map(cat => ({ ...cat, count: productos.filter(p => p.categoria_id === cat.id).length })),
   ];
 
+  // ── Charco: aparece al pie de "Nuestra cocina" y, al perder de vista esa sección, queda pegado al header goteando hasta el pie de página ──
+  const mostrarCharco       = galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda;
+  const charcoViajeroVisible = mostrarCharco && !flechaVisible && !finPaginaVisible;
+  const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
+  const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
+
   return (
     <div className="pagina">
 
       {/* ── HEADER ── */}
-      <div className={`sticky-top ${headerCompacto ? 'compacto' : ''}`}>
+      <div className={`sticky-top ${headerCompacto ? 'compacto' : ''}`} ref={stickyTopRef}>
         <header className="header">
           <div className="header-inner">
             <div className="header-marca">
@@ -499,12 +535,20 @@ export default function MenuPage() {
             <span className="galeria-gota" />
           </div>
 
-          <div className={`galeria-flecha-fixed ${flechaVisible && cantidad === 0 ? 'flecha-visible' : ''}`}>
-            <span className="galeria-mancha" aria-hidden="true" />
-            <button className="galeria-flecha-abajo" onClick={() => document.querySelector('.main')?.scrollIntoView({ behavior: 'smooth' })} aria-label="Seguir bajando">
+          {/* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */}
+          <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''}`} aria-hidden="true">
+            <span className="galeria-mancha" />
+            <div className="galeria-flecha-abajo">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
+            </div>
           </div>
+
+          {/* charco pegado al header: toma la posta cuando "Nuestra cocina" se pierde de vista y sigue goteando hasta el pie de página */}
+          {charcoViajeroVisible && (
+            <div className="charco-viajero" style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }} aria-hidden="true">
+              <span className="charco-gota-viajera" />
+            </div>
+          )}
         </>
       )}
 
@@ -624,7 +668,7 @@ export default function MenuPage() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="footer">
+      <footer className="footer" ref={footerRef}>
         <div className="footer-inner">
           <div className="footer-marca">
             <img src="/logo.png" alt="Don Adriano's" className="footer-logo" />
@@ -773,7 +817,7 @@ export default function MenuPage() {
 
       {/* ── BARRA DE CARRITO — grande, fija abajo, bien visible ── */}
       {cantidad > 0 && !showCheckout && (
-        <button className="barra-carrito" onClick={() => setShowCheckout(true)}>
+        <button className={`barra-carrito ${carritoIluminado ? 'barra-carrito-brillo' : ''}`} onClick={() => setShowCheckout(true)}>
           <span className="barra-carrito-icono">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span className="barra-carrito-badge">{cantidad}</span>
@@ -868,6 +912,22 @@ export default function MenuPage() {
         .barra-carrito-texto strong { font-size: 16px; font-weight: 800; }
         .barra-carrito-texto span { font-size: 12.5px; color: #c9c2b6; }
         .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; }
+
+        /* ── el carrito se ilumina al contacto con la gota (reemplaza a la flecha cuando ya hay productos agregados) ── */
+        .barra-carrito-brillo { animation: barraEntrar 0.35s cubic-bezier(0.32,0.72,0,1), carrito-ilumina 3.6s ease-in-out infinite; }
+        .barra-carrito-brillo .barra-carrito-icono { animation: carrito-icono-ilumina 3.6s ease-in-out infinite; }
+        @keyframes carrito-ilumina {
+          0%, 62% { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          70%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 22px 7px rgba(240,98,62,0.55); }
+          84%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 22px 7px rgba(240,98,62,0.55); }
+          100%    { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+        }
+        @keyframes carrito-icono-ilumina {
+          0%, 62% { background: #F0623E; }
+          70%     { background: #F7B267; }
+          84%     { background: #F7B267; }
+          100%    { background: #F0623E; }
+        }
 
         /* ── ESTADO ── */
         .estado-bar { max-width: 760px; margin: 0 auto; padding: 6px 16px 10px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; max-height: 30px; opacity: 1; overflow: hidden; transition: max-height 0.2s ease, opacity 0.15s ease, padding 0.2s ease; }
@@ -1042,7 +1102,7 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
 
         /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        .galeria-seccion { position: relative; padding: 18px 0 6px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        .galeria-seccion { position: relative; padding: 18px 0 0; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
@@ -1068,7 +1128,25 @@ export default function MenuPage() {
           100% { opacity: 0; transform: translateY(72px) scaleY(2.7); }
         }
 
-        /* ── flecha pegada al borde inferior de la pantalla mientras "Nuestra cocina" está a la vista ── */
+        /* ── charco pegado al header: toma la posta apenas "Nuestra cocina" se pierde de vista y recorre toda la pantalla goteando, hasta el pie de página ── */
+        .charco-viajero { position: fixed; left: 50%; transform: translateX(-50%); width: 0; height: 0; z-index: 38; pointer-events: none; transition: top 0.2s ease; }
+        .charco-gota-viajera {
+          position: absolute; top: 0; left: 0; width: 9px; height: 9px;
+          background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
+          box-shadow: 0 1px 3px rgba(178,58,30,0.35);
+          border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
+          transform-origin: top center;
+          animation: charco-cae-viajero 3.6s cubic-bezier(0.55,0,0.85,0.35) infinite;
+        }
+        @keyframes charco-cae-viajero {
+          0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
+          52%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) scaleY(2.1); opacity: 1; }
+          64%  { transform: translateY(var(--recorrido, 500px)) scaleY(2.7); opacity: 0.9; }
+          72%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) scaleY(2.7); }
+          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) scaleY(2.7); }
+        }
+
+        /* ── flecha: guía visual de que se puede seguir bajando (no es un botón), visible mientras se recorre el menú y hasta llegar al pie de página ── */
         .galeria-flecha-fixed {
           position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
           display: flex; align-items: center; justify-content: center;
@@ -1090,14 +1168,12 @@ export default function MenuPage() {
           100%    { opacity: 0.4; transform: scale(0.9); }
         }
         .galeria-flecha-abajo {
-          position: relative; width: 40px; height: 40px; border-radius: 50%; border: none;
-          background: #fffbf5; color: #F0623E; cursor: pointer;
+          position: relative; width: 40px; height: 40px; border-radius: 50%;
+          background: #fffbf5; color: #F0623E;
           display: flex; align-items: center; justify-content: center;
           box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-          transition: transform 0.15s;
           animation: flecha-ilumina 3.6s ease-in-out infinite;
         }
-        .galeria-flecha-abajo:hover { transform: translateY(2px); }
         @keyframes flecha-ilumina {
           0%, 62% { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
           70%     { background: #F0623E; box-shadow: 0 0 20px 6px rgba(240,98,62,0.65); color: #fff; }
@@ -1132,7 +1208,7 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
-          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo { animation: none; }
+          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .charco-gota-viajera, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono { animation: none; }
         }
 
         /* ── FOOTER ── */
