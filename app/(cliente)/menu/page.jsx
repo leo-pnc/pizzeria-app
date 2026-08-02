@@ -572,7 +572,7 @@ export default function MenuPage() {
                     <stop offset="100%" stopColor="#F0623E" />
                   </linearGradient>
                 </defs>
-                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,22 300,22 C 283,22 279,11 262,11 C 244,11 238,32 216,32 C 194,32 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGrad)" />
+                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGrad)" />
               </svg>
             </div>
             <div className="galeria-caida">
@@ -602,7 +602,7 @@ export default function MenuPage() {
                     <stop offset="100%" stopColor="#F0623E" />
                   </linearGradient>
                 </defs>
-                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,22 300,22 C 283,22 279,11 262,11 C 244,11 238,32 216,32 C 194,32 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGradFijo)" />
+                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGradFijo)" />
               </svg>
             </div>
             <span className="charco-gota-viajera" />
@@ -1174,19 +1174,20 @@ export default function MenuPage() {
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .galeria-caida { position: relative; height: 108px; overflow: visible; }
         .galeria-gota {
-          position: absolute; top: 0; left: 54%; width: 13px; height: 13px;
+          position: absolute; top: 0; right: 46px; width: 13px; height: 13px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
           box-shadow: 0 1px 3px rgba(178,58,30,0.35);
           border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
           transform-origin: top center;
-          animation: gota-cae 3.6s cubic-bezier(0.55,0,0.85,0.35) infinite;
+          animation: gota-cae 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
         }
         @keyframes gota-cae {
-          0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
-          52%  { transform: translateY(66px) scaleY(2.1); opacity: 1; }
-          64%  { transform: translateY(88px) scaleY(2.7); opacity: 0.9; }
-          72%  { opacity: 0; transform: translateY(92px) scaleY(2.7); }
-          100% { opacity: 0; transform: translateY(92px) scaleY(2.7); }
+          0%   { transform: translateY(0) translateX(0) scaleY(0.75); opacity: 1; }
+          30%  { transform: translateY(30px) translateX(-2px) scaleY(1.3); opacity: 1; }
+          52%  { transform: translateY(66px) translateX(2px) scaleY(2.1); opacity: 1; }
+          64%  { transform: translateY(88px) translateX(0) scaleY(2.7); opacity: 0.9; }
+          72%  { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7); }
+          100% { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7); }
         }
 
         /* ── charco pegado al header: la onda (el charco en sí) + la gota, toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
@@ -1200,24 +1201,25 @@ export default function MenuPage() {
         .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
         .charco-viajero-onda .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .charco-gota-viajera {
-          position: absolute; top: 14px; left: 54%; width: 12px; height: 12px;
+          position: absolute; top: 14px; right: 46px; width: 12px; height: 12px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
           box-shadow: 0 1px 3px rgba(178,58,30,0.35);
           border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
           transform-origin: top center;
-          animation: charco-cae-viajero 3.6s cubic-bezier(0.55,0,0.85,0.35) infinite;
+          animation: charco-cae-viajero 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
         }
         @keyframes charco-cae-viajero {
-          0%   { transform: translateY(0) scaleY(0.75); opacity: 1; }
-          52%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) scaleY(2.1); opacity: 1; }
-          64%  { transform: translateY(var(--recorrido, 500px)) scaleY(2.7); opacity: 0.9; }
-          72%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) scaleY(2.7); }
-          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) scaleY(2.7); }
+          0%   { transform: translateY(0) translateX(0) scaleY(0.75); opacity: 1; }
+          30%  { transform: translateY(calc(var(--recorrido, 500px) * 0.33)) translateX(-2px) scaleY(1.3); opacity: 1; }
+          52%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) translateX(2px) scaleY(2.1); opacity: 1; }
+          64%  { transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); opacity: 0.9; }
+          72%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); }
+          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); }
         }
 
         /* ── flecha: guía visual de que se puede seguir bajando (no es un botón), visible mientras se recorre el menú y hasta llegar al pie de página ── */
         .galeria-flecha-fixed {
-          position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+          position: fixed; right: 28px; bottom: 18px; width: 40px;
           display: flex; align-items: center; justify-content: center;
           z-index: 40; opacity: 0; pointer-events: none;
           transition: opacity 0.35s ease, transform 0.35s ease;
