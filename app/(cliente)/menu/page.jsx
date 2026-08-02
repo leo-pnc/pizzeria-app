@@ -119,6 +119,14 @@ export default function MenuPage() {
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
   const [flechaVisible, setFlechaVisible] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduceMotion(mq.matches);
+    const handler = (e) => setReduceMotion(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
   const [headerAltura, setHeaderAltura] = useState(72);
   const [recorridoCharco, setRecorridoCharco] = useState(500);
@@ -572,7 +580,21 @@ export default function MenuPage() {
                     <stop offset="100%" stopColor="#F0623E" />
                   </linearGradient>
                 </defs>
-                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGrad)" />
+                <path
+                  fill="url(#quesoGrad)"
+                  d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                >
+                  {!reduceMotion && (
+                    <animate
+                      attributeName="d"
+                      dur="4.8s"
+                      repeatCount="indefinite"
+                      values="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z;
+                              M0,0 L400,0 L400,8 C 385,8 381,21 368,21 C 355,21 351,12 338,12 C 322,12 317,29 300,29 C 283,29 279,14 262,14 C 244,14 238,18 216,18 C 194,18 189,9 170,9 C 152,9 147,23 130,23 C 113,23 109,8 92,8 C 75,8 70,22 52,22 C 35,22 31,12 15,12 C 7,12 3,8 0,10 Z;
+                              M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                    />
+                  )}
+                </path>
               </svg>
             </div>
             <div className="galeria-caida">
@@ -602,7 +624,21 @@ export default function MenuPage() {
                     <stop offset="100%" stopColor="#F0623E" />
                   </linearGradient>
                 </defs>
-                <path d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z" fill="url(#quesoGradFijo)" />
+                <path
+                  fill="url(#quesoGradFijo)"
+                  d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                >
+                  {!reduceMotion && (
+                    <animate
+                      attributeName="d"
+                      dur="4.8s"
+                      repeatCount="indefinite"
+                      values="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z;
+                              M0,0 L400,0 L400,8 C 385,8 381,21 368,21 C 355,21 351,12 338,12 C 322,12 317,29 300,29 C 283,29 279,14 262,14 C 244,14 238,18 216,18 C 194,18 189,9 170,9 C 152,9 147,23 130,23 C 113,23 109,8 92,8 C 75,8 70,22 52,22 C 35,22 31,12 15,12 C 7,12 3,8 0,10 Z;
+                              M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                    />
+                  )}
+                </path>
               </svg>
             </div>
             <span className="charco-gota-viajera" />
@@ -1170,13 +1206,9 @@ export default function MenuPage() {
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
         .galeria-charco-local { position: relative; z-index: 2; background: transparent; }
-        .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; transform-origin: bottom center; animation: charco-respirar 4.5s ease-in-out infinite; }
+        .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .galeria-caida { position: relative; height: 108px; overflow: visible; }
-        @keyframes charco-respirar {
-          0%, 100% { transform: scaleY(1); }
-          50%      { transform: scaleY(1.05); }
-        }
         .galeria-gota {
           position: absolute; top: 0; right: 46px; width: 13px; height: 13px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
@@ -1206,7 +1238,7 @@ export default function MenuPage() {
           will-change: top;
         }
         .charco-viajero.charco-viajero-visible { opacity: 1; }
-        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; transform-origin: bottom center; animation: charco-respirar 4.5s ease-in-out infinite; }
+        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
         .charco-viajero-onda .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .charco-gota-viajera {
           position: absolute; top: 14px; right: 46px; width: 12px; height: 12px;
