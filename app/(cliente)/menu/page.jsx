@@ -8,6 +8,47 @@ import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAv
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
+// ── Galería "foto por foto": salto rápido hacia la derecha, pausa, repite ──
+function GaleriaCocina({ fotos, onSelect }) {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    if (fotos.length <= 1) return;
+    const id = setInterval(() => {
+      setIdx(prev => (prev + 1) % fotos.length);
+    }, 2800);
+    return () => clearInterval(id);
+  }, [fotos.length]);
+
+  return (
+    <div className="galeria-slider">
+      <div className="galeria-slider-marco">
+        <div
+          className="galeria-slider-track"
+          style={{ transform: `translateX(-${idx * 100}%)` }}
+        >
+          {fotos.map((foto, i) => (
+            <button
+              key={foto.id}
+              className="galeria-slider-item"
+              onClick={() => onSelect(i)}
+            >
+              <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
+            </button>
+          ))}
+        </div>
+      </div>
+      {fotos.length > 1 && (
+        <div className="galeria-slider-puntos">
+          {fotos.map((_, i) => (
+            <span key={i} className={`galeria-punto ${i === idx ? 'activo' : ''}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
 
@@ -294,10 +335,6 @@ export default function MenuPage() {
 
   const hayProductosNuevos = productos.some(p => p.es_nuevo);
 
-  const galeriaConIndice = galeria.map((foto, i) => ({ foto, i }));
-  const galeriaFilaA = galeriaConIndice.filter((_, idx) => idx % 2 === 0);
-  const galeriaFilaB = galeriaConIndice.filter((_, idx) => idx % 2 === 1);
-
   const todasCats = [
     { id: '__todo__', nombre: 'Todo', count: productos.length + promociones.length },
     ...(hayProductosNuevos ? [{ id: '__nuevo__', nombre: 'Nuevo', count: productos.filter(p => p.es_nuevo).length }] : []),
@@ -366,7 +403,7 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* ── GALERÍA (dos filas cruzadas, con vida) ── solo se ve en "Todo" ── */}
+      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── solo se ve en "Todo" ── */}
       {galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda && (
         <section className="galeria-seccion">
           <div className="galeria-blob" />
@@ -377,45 +414,7 @@ export default function MenuPage() {
               </span>
               Nuestra cocina
             </h2>
-          </div>
-
-          <div className="galeria-doble">
-            <div className="galeria-scroll">
-              <div
-                className="galeria-track galeria-track-der"
-                style={{ animationDuration: `${Math.max(galeriaFilaA.length * 7, 18)}s` }}
-              >
-                {[...galeriaFilaA, ...galeriaFilaA].map(({ foto, i }, idx) => (
-                  <button
-                    key={`a-${foto.id}-${idx}`}
-                    className="galeria-thumb galeria-thumb-a"
-                    onClick={() => setLightboxIdx(i)}
-                    aria-hidden={idx >= galeriaFilaA.length ? 'true' : undefined}
-                    tabIndex={idx >= galeriaFilaA.length ? -1 : 0}
-                  >
-                    <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="galeria-scroll">
-              <div
-                className="galeria-track galeria-track-izq"
-                style={{ animationDuration: `${Math.max(galeriaFilaB.length * 7, 18)}s` }}
-              >
-                {[...galeriaFilaB, ...galeriaFilaB].map(({ foto, i }, idx) => (
-                  <button
-                    key={`b-${foto.id}-${idx}`}
-                    className="galeria-thumb galeria-thumb-b"
-                    onClick={() => setLightboxIdx(i)}
-                    aria-hidden={idx >= galeriaFilaB.length ? 'true' : undefined}
-                    tabIndex={idx >= galeriaFilaB.length ? -1 : 0}
-                  >
-                    <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
           </div>
         </section>
       )}
@@ -983,44 +982,27 @@ export default function MenuPage() {
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
 
-        /* ── GALERÍA (dos filas cruzadas, con vida) ── */
-        .galeria-seccion { position: relative; background: #fff; border-bottom: 1px solid #ece6dc; padding: 20px 0 22px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
+        /* ── GALERÍA: foto por foto, salto rápido y pausa ── */
+        .galeria-seccion { position: relative; background: #fff; border-bottom: 1px solid #ece6dc; padding: 20px 0 24px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
         @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .galeria-blob { position: absolute; width: 240px; height: 240px; border-radius: 50%; background: #F0623E; opacity: 0.12; filter: blur(60px); top: -90px; right: -60px; animation: galeria-blob-mov 8s ease-in-out infinite; pointer-events: none; }
         @keyframes galeria-blob-mov { 0%,100%{ transform: translate(0,0) scale(1); } 33%{ transform: translate(-30px,26px) scale(1.2); } 66%{ transform: translate(20px,10px) scale(0.9); } }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
-        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
         .galeria-icono { display: flex; color: #F0623E; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
         @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
 
-        .galeria-doble { display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 1; }
-        .galeria-scroll { overflow: hidden; }
-        .galeria-track { display: flex; gap: 12px; width: max-content; animation-timing-function: linear; animation-iteration-count: infinite; }
-        .galeria-track-der { animation-name: galeria-derecha; }
-        .galeria-track-izq { animation-name: galeria-izquierda; }
-        .galeria-scroll:hover .galeria-track { animation-play-state: paused; }
-        @keyframes galeria-derecha { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @keyframes galeria-izquierda { from { transform: translateX(-50%); } to { transform: translateX(0); } }
-
-        .galeria-thumb { position: relative; flex-shrink: 0; border: none; padding: 0; cursor: pointer; border-radius: 18px; overflow: hidden; background: #f3efe6; transition: transform 0.25s ease, box-shadow 0.25s ease; animation: galeria-flotar 3.6s ease-in-out infinite; }
-        .galeria-thumb-a { width: 148px; height: 188px; }
-        .galeria-thumb-b { width: 148px; height: 148px; margin-top: 22px; }
-        .galeria-thumb:nth-child(odd) { animation-delay: 0s; }
-        .galeria-thumb:nth-child(even) { animation-delay: 0.5s; }
-        .galeria-thumb:nth-child(3n) { animation-delay: 1s; }
-        @keyframes galeria-flotar { 0%,100%{ transform: translateY(0) rotate(0deg); } 50%{ transform: translateY(-5px) rotate(0.6deg); } }
-        .galeria-thumb:hover, .galeria-thumb:active { transform: scale(1.08) rotate(-2deg) !important; box-shadow: 0 12px 28px rgba(0,0,0,0.2); z-index: 2; animation-play-state: paused; }
-        .galeria-thumb::after { content: ''; position: absolute; inset: 0; border-radius: 18px; border: 3px solid transparent; pointer-events: none; transition: border-color 0.2s; }
-        .galeria-thumb:nth-child(4n+1)::after { border-color: rgba(240,98,62,0.55); }
-        .galeria-thumb:nth-child(4n+2)::after { border-color: rgba(217,165,52,0.55); }
-        .galeria-thumb:nth-child(4n+3)::after { border-color: rgba(46,130,90,0.45); }
-        .galeria-thumb:nth-child(4n+4)::after { border-color: rgba(240,98,62,0.25); }
-        .galeria-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; pointer-events: none; }
-        .galeria-thumb:hover img { transform: scale(1.1); }
+        .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .galeria-slider-marco { width: 100%; max-width: 280px; aspect-ratio: 4/5; border-radius: 24px; overflow: hidden; box-shadow: 0 12px 30px rgba(34,32,28,0.16); background: #f3efe6; }
+        .galeria-slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.55s cubic-bezier(0.68,-0.1,0.27,1.15); }
+        .galeria-slider-item { flex: 0 0 100%; height: 100%; border: none; padding: 0; margin: 0; cursor: pointer; background: none; }
+        .galeria-slider-item img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+        .galeria-slider-puntos { display: flex; gap: 6px; }
+        .galeria-punto { width: 6px; height: 6px; border-radius: 50%; background: #e4dcc9; transition: width 0.3s ease, background 0.3s ease; }
+        .galeria-punto.activo { width: 20px; background: #F0623E; }
 
         @media (prefers-reduced-motion: reduce) {
-          .galeria-track, .galeria-thumb { animation: none; }
-          .galeria-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .galeria-slider-track { transition: none; }
           .galeria-icono, .galeria-blob { animation: none; }
         }
 
