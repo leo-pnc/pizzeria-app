@@ -118,11 +118,13 @@ export default function MenuPage() {
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
-  const [flechaVisible, setFlechaVisible] = useState(false);
+  const [flechaVisible, setFlechaVisible] = useState(true);
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
   const [headerAltura, setHeaderAltura] = useState(72);
   const [recorridoCharco, setRecorridoCharco] = useState(500);
   const charcoInicioRef = useRef(null);
+  const charcoEpochRef = useRef(null);
+  const [carritoAnimDelay, setCarritoAnimDelay] = useState('0ms');
   const footerRef    = useRef(null);
   const stickyTopRef = useRef(null);
 
@@ -133,7 +135,7 @@ export default function MenuPage() {
   // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header"
   useEffect(() => {
     const el = charcoInicioRef.current;
-    if (!el) { setFlechaVisible(false); return; }
+    if (!el) { setFlechaVisible(true); return; }
     const obs = new IntersectionObserver(
       ([entry]) => setFlechaVisible(entry.isIntersecting),
       { threshold: 0, rootMargin: `-${headerAltura}px 0px 0px 0px` }
@@ -438,6 +440,20 @@ export default function MenuPage() {
   const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
   const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
 
+  // Reloj maestro del charco: guarda el instante en que arrancan las animaciones de flecha/mancha/gota (se montan juntas y nunca se reinician)
+  useEffect(() => {
+    if (mostrarCharco && charcoEpochRef.current === null) charcoEpochRef.current = performance.now();
+  }, [mostrarCharco]);
+
+  // El carrito recién se monta al agregar el primer producto: en vez de arrancar su brillo en un instante al azar,
+  // lo arranca ya desfasado a la misma fase del reloj maestro, para que ilumine justo en el mismo instante que la flecha
+  useEffect(() => {
+    if (cantidad > 0 && charcoEpochRef.current !== null) {
+      const transcurrido = performance.now() - charcoEpochRef.current;
+      setCarritoAnimDelay(`${-(transcurrido % 3600)}ms`);
+    }
+  }, [cantidad > 0]);
+
   return (
     <div className="pagina">
 
@@ -543,12 +559,14 @@ export default function MenuPage() {
             </div>
           </div>
 
-          {/* charco pegado al header: toma la posta apenas el header tapa el punto de origen, y sigue goteando hasta el pie de página */}
-          {charcoViajeroVisible && (
-            <div className="charco-viajero" style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }} aria-hidden="true">
-              <span className="charco-gota-viajera" />
-            </div>
-          )}
+          {/* charco pegado al header: siempre montado (nunca reinicia su animación) para no perder la sincronía con el brillo; solo se oculta con opacidad */}
+          <div
+            className={`charco-viajero ${charcoViajeroVisible ? 'charco-viajero-visible' : ''}`}
+            style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }}
+            aria-hidden="true"
+          >
+            <span className="charco-gota-viajera" />
+          </div>
         </>
       )}
 
@@ -817,8 +835,15 @@ export default function MenuPage() {
 
       {/* ── BARRA DE CARRITO — grande, fija abajo, bien visible ── */}
       {cantidad > 0 && !showCheckout && (
-        <button className={`barra-carrito ${carritoIluminado ? 'barra-carrito-brillo' : ''}`} onClick={() => setShowCheckout(true)}>
-          <span className="barra-carrito-icono">
+        <button
+          className={`barra-carrito ${carritoIluminado ? 'barra-carrito-brillo' : ''}`}
+          style={carritoIluminado ? { animationDelay: `0ms, ${carritoAnimDelay}` } : undefined}
+          onClick={() => setShowCheckout(true)}
+        >
+          <span
+            className="barra-carrito-icono"
+            style={carritoIluminado ? { animationDelay: carritoAnimDelay } : undefined}
+          >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span className="barra-carrito-badge">{cantidad}</span>
           </span>
@@ -1129,7 +1154,12 @@ export default function MenuPage() {
         }
 
         /* ── charco pegado al header: toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
-        .charco-viajero { position: fixed; left: 50%; transform: translateX(-50%); width: 0; height: 0; z-index: 38; pointer-events: none; transition: top 0.2s ease; }
+        .charco-viajero {
+          position: fixed; left: 50%; transform: translateX(-50%); width: 0; height: 0;
+          z-index: 38; pointer-events: none; opacity: 0;
+          transition: top 0.2s ease, opacity 0.3s ease;
+        }
+        .charco-viajero.charco-viajero-visible { opacity: 1; }
         .charco-gota-viajera {
           position: absolute; top: 0; left: 0; width: 12px; height: 12px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
