@@ -981,15 +981,15 @@ export default function MenuPage() {
         .barra-carrito-brillo { animation: barraEntrar 0.35s cubic-bezier(0.32,0.72,0,1), carrito-ilumina 3.6s ease-in-out infinite; }
         .barra-carrito-brillo .barra-carrito-icono { animation: carrito-icono-ilumina 3.6s ease-in-out infinite; }
         @keyframes carrito-ilumina {
-          0%, 62%  { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
-          64%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 24px 8px rgba(240,98,62,0.65); }
-          68%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          0%, 66%  { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
+          68%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 24px 8px rgba(240,98,62,0.65); }
+          72%      { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
           100%     { box-shadow: 0 8px 28px rgba(0,0,0,0.28); }
         }
         @keyframes carrito-icono-ilumina {
-          0%, 62%  { background: #F0623E; }
-          64%      { background: #F7B267; }
-          68%      { background: #F0623E; }
+          0%, 66%  { background: #F0623E; }
+          68%      { background: #F7B267; }
+          72%      { background: #F0623E; }
           100%     { background: #F0623E; }
         }
 
@@ -1170,9 +1170,13 @@ export default function MenuPage() {
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
         .galeria-charco-local { position: relative; z-index: 2; background: transparent; }
-        .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
+        .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; transform-origin: bottom center; animation: charco-respirar 4.5s ease-in-out infinite; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .galeria-caida { position: relative; height: 108px; overflow: visible; }
+        @keyframes charco-respirar {
+          0%, 100% { transform: scaleY(1); }
+          50%      { transform: scaleY(1.05); }
+        }
         .galeria-gota {
           position: absolute; top: 0; right: 46px; width: 13px; height: 13px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
@@ -1181,13 +1185,17 @@ export default function MenuPage() {
           transform-origin: top center;
           animation: gota-cae 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
         }
+        /* 0%-22%: todavía pegada al charco, se estira formando un cuello fino; 22%: se desprende (snap) y recién ahí empieza a caer libre */
         @keyframes gota-cae {
-          0%   { transform: translateY(0) translateX(0) scaleY(0.75); opacity: 1; }
-          30%  { transform: translateY(30px) translateX(-2px) scaleY(1.3); opacity: 1; }
-          52%  { transform: translateY(66px) translateX(2px) scaleY(2.1); opacity: 1; }
-          64%  { transform: translateY(88px) translateX(0) scaleY(2.7); opacity: 0.9; }
-          72%  { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7); }
-          100% { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7); }
+          0%   { transform: translateY(-3px) translateX(0) scaleY(0.4) scaleX(1.15); opacity: 0.9; }
+          10%  { transform: translateY(-2px) translateX(0) scaleY(1) scaleX(0.85); opacity: 1; }
+          19%  { transform: translateY(3px) translateX(0) scaleY(1.7) scaleX(0.62); opacity: 1; }
+          23%  { transform: translateY(9px) translateX(0) scaleY(1) scaleX(1.1); opacity: 1; }
+          40%  { transform: translateY(30px) translateX(-2px) scaleY(1.5) scaleX(1); opacity: 1; }
+          58%  { transform: translateY(66px) translateX(2px) scaleY(2.1) scaleX(1); opacity: 1; }
+          68%  { transform: translateY(88px) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
+          76%  { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
+          100% { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
         }
 
         /* ── charco pegado al header: la onda (el charco en sí) + la gota, toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
@@ -1198,7 +1206,7 @@ export default function MenuPage() {
           will-change: top;
         }
         .charco-viajero.charco-viajero-visible { opacity: 1; }
-        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
+        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; transform-origin: bottom center; animation: charco-respirar 4.5s ease-in-out infinite; }
         .charco-viajero-onda .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .charco-gota-viajera {
           position: absolute; top: 14px; right: 46px; width: 12px; height: 12px;
@@ -1208,13 +1216,17 @@ export default function MenuPage() {
           transform-origin: top center;
           animation: charco-cae-viajero 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
         }
+        /* misma secuencia de desprendimiento que gota-cae, pero con recorrido dinámico (--recorrido) para el tramo de caída libre */
         @keyframes charco-cae-viajero {
-          0%   { transform: translateY(0) translateX(0) scaleY(0.75); opacity: 1; }
-          30%  { transform: translateY(calc(var(--recorrido, 500px) * 0.33)) translateX(-2px) scaleY(1.3); opacity: 1; }
-          52%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) translateX(2px) scaleY(2.1); opacity: 1; }
-          64%  { transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); opacity: 0.9; }
-          72%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); }
-          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7); }
+          0%   { transform: translateY(-3px) translateX(0) scaleY(0.4) scaleX(1.15); opacity: 0.9; }
+          10%  { transform: translateY(-2px) translateX(0) scaleY(1) scaleX(0.85); opacity: 1; }
+          19%  { transform: translateY(3px) translateX(0) scaleY(1.7) scaleX(0.62); opacity: 1; }
+          23%  { transform: translateY(9px) translateX(0) scaleY(1) scaleX(1.1); opacity: 1; }
+          40%  { transform: translateY(calc(var(--recorrido, 500px) * 0.33)) translateX(-2px) scaleY(1.5) scaleX(1); opacity: 1; }
+          58%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) translateX(2px) scaleY(2.1) scaleX(1); opacity: 1; }
+          68%  { transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
+          76%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); }
+          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); }
         }
 
         /* ── flecha: guía visual de que se puede seguir bajando (no es un botón), visible mientras se recorre el menú y hasta llegar al pie de página ── */
@@ -1232,11 +1244,11 @@ export default function MenuPage() {
           opacity: 0; transform: scale(0.85);
           animation: mancha-aparece 3.6s ease-in-out infinite;
         }
-        /* el brillo solo aparece en el instante exacto en que la gota toca (64% del ciclo, igual que gota-cae/charco-cae-viajero): ni antes ni después */
+        /* el brillo solo aparece en el instante exacto en que la gota toca (68% del ciclo, igual que gota-cae/charco-cae-viajero): ni antes ni después */
         @keyframes mancha-aparece {
-          0%, 62%  { opacity: 0; transform: scale(0.85); }
-          64%      { opacity: 1; transform: scale(1.3); }
-          68%      { opacity: 0; transform: scale(0.95); }
+          0%, 66%  { opacity: 0; transform: scale(0.85); }
+          68%      { opacity: 1; transform: scale(1.3); }
+          72%      { opacity: 0; transform: scale(0.95); }
           100%     { opacity: 0; transform: scale(0.85); }
         }
         .galeria-flecha-abajo {
@@ -1247,9 +1259,9 @@ export default function MenuPage() {
           animation: flecha-ilumina 3.6s ease-in-out infinite;
         }
         @keyframes flecha-ilumina {
-          0%, 62%  { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
-          64%      { background: #F0623E; box-shadow: 0 0 22px 8px rgba(240,98,62,0.7); color: #fff; }
-          68%      { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          0%, 66%  { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
+          68%      { background: #F0623E; box-shadow: 0 0 22px 8px rgba(240,98,62,0.7); color: #fff; }
+          72%      { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
           100%     { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
         }
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
@@ -1280,7 +1292,7 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
-          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .charco-gota-viajera, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono { animation: none; }
+          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .charco-gota-viajera, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono, .galeria-goteo-wrap, .charco-viajero-onda { animation: none; }
         }
 
         /* ── FOOTER ── */
