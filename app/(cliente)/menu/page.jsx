@@ -451,7 +451,6 @@ export default function MenuPage() {
         <section className="galeria-seccion">
           <div className="galeria-fondo" />
           <div className="galeria-overlay" />
-          <div className="galeria-fundido" />
           <div className="galeria-inner">
             <h2 className="galeria-titulo">
               <span className="galeria-icono">
@@ -475,6 +474,20 @@ export default function MenuPage() {
                 <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
               </div>
             </div>
+          </div>
+
+          {/* goteo tipo queso derretido que conecta con la página de abajo */}
+          <div className="galeria-goteo-wrap">
+            <svg className="galeria-goteo-svg" viewBox="0 0 400 46" preserveAspectRatio="none">
+              <path d="M0,0 L400,0 L400,14 C 385,14 380,26 366,26 C 352,26 348,15 334,15 C 318,15 313,34 296,34 C 279,34 275,17 258,17 C 240,17 233,42 214,42 C 195,42 190,19 172,19 C 155,19 150,32 134,32 C 118,32 114,16 98,16 C 82,16 77,29 60,29 C 44,29 40,15 24,15 C 14,15 8,16 0,20 Z" fill="#fffbf5" />
+            </svg>
+            <div className="galeria-gota" />
+          </div>
+
+          <div className="galeria-flecha-wrap">
+            <button className="galeria-flecha-abajo" onClick={() => document.querySelector('.main')?.scrollIntoView({ behavior: 'smooth' })} aria-label="Seguir bajando">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
           </div>
         </section>
       )}
