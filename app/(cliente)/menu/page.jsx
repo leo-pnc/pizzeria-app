@@ -1194,7 +1194,8 @@ export default function MenuPage() {
         .charco-viajero {
           position: fixed; left: 0; right: 0;
           z-index: 38; pointer-events: none; opacity: 0;
-          transition: top 0.2s ease, opacity 0.3s ease;
+          transition: opacity 0.3s ease;
+          will-change: top;
         }
         .charco-viajero.charco-viajero-visible { opacity: 1; }
         .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
