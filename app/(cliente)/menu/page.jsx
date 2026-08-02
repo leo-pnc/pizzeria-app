@@ -132,17 +132,11 @@ export default function MenuPage() {
 
   useEffect(() => { cargar(); }, []);
 
-  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header"
-  useEffect(() => {
-    const el = charcoInicioRef.current;
-    if (!el) { setFlechaVisible(true); return; }
-    const obs = new IntersectionObserver(
-      ([entry]) => setFlechaVisible(entry.isIntersecting),
-      { threshold: 0, rootMargin: `-${headerAltura}px 0px 0px 0px` }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [galeria.length, categoriaActiva, busqueda, headerAltura]);
+  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header".
+  // Se calcula en el propio scroll (no con un IntersectionObserver) porque la altura del header cambia todo el tiempo
+  // mientras se comprime, y recrear el observer en cada cambio de altura lo dejaba sin tiempo de reportar nada.
+  const headerAlturaRef = useRef(72);
+  useEffect(() => { headerAlturaRef.current = headerAltura; }, [headerAltura]);
 
   // Detecta cuando se llega al final de la página (footer) para que el charco y la flecha guía desaparezcan ahí
   useEffect(() => {
@@ -446,6 +440,31 @@ export default function MenuPage() {
   const charcoViajeroVisible = mostrarCharco && !flechaVisible && !finPaginaVisible;
   const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
   const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
+
+  // El charco vive junto a la foto mientras ese punto esté debajo del header; en cuanto el header lo tapa, salta a modo "pegado al header".
+  // Se calcula en el propio scroll (no con un IntersectionObserver) porque la altura del header cambia todo el tiempo
+  // mientras se comprime, y recrear el observer en cada cambio de altura lo dejaba sin tiempo de reportar nada.
+  useEffect(() => {
+    if (!mostrarCharco) { setFlechaVisible(true); return; }
+    let ticking = false;
+    function evaluar() {
+      ticking = false;
+      const el = charcoInicioRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // sigue "visible" (modo local) mientras el punto de origen no haya quedado tapado por el header
+      setFlechaVisible(rect.bottom > headerAlturaRef.current);
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(evaluar);
+    }
+    evaluar();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+  }, [mostrarCharco]);
 
   // Reloj maestro del charco: guarda el instante en que arrancan las animaciones de flecha/mancha/gota (se montan juntas y nunca se reinician)
   useEffect(() => {
