@@ -1147,7 +1147,7 @@ export default function MenuPage() {
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
-        .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: #fffbf5; }
+        .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: transparent; pointer-events: none; }
         .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .galeria-caida { position: relative; height: 108px; overflow: visible; }
