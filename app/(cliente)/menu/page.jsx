@@ -127,36 +127,10 @@ export default function MenuPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
   const heroRef       = useRef(null);
-  const galeriaFondoRef = useRef(null);
 
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
-
-  // Parallax sutil: el fondo de "Nuestra cocina" se mueve un poco más lento que el resto al hacer scroll,
-  // para que se sienta con profundidad real (como detrás de una ventana) en vez de un bloque plano pegado.
-  useEffect(() => {
-    if (galeria.length === 0 || reduceMotion) return;
-    let ticking = false;
-    function actualizar() {
-      const el = galeriaFondoRef.current;
-      if (el) {
-        const rect = el.parentElement.getBoundingClientRect();
-        const desplazamiento = rect.top * 0.18;
-        el.style.transform = `translateY(${desplazamiento}px)`;
-      }
-      ticking = false;
-    }
-    function alScrollear() {
-      if (!ticking) {
-        requestAnimationFrame(actualizar);
-        ticking = true;
-      }
-    }
-    actualizar();
-    window.addEventListener('scroll', alScrollear, { passive: true });
-    return () => window.removeEventListener('scroll', alScrollear);
-  }, [galeria.length, reduceMotion]);
 
   // El header ya no cambia de tamaño con JS: la parte "de más" (subtítulo + estado) vive en el flujo normal
   // de la página y se va con el scroll de forma nativa. Lo único que queda atado a un IntersectionObserver
@@ -483,18 +457,9 @@ export default function MenuPage() {
         <div className={`galeria-colapsable ${mostrarGaleria ? '' : 'cerrado'}`}>
           <div className="galeria-colapsable-inner">
             <section className="galeria-seccion">
-              <div className="galeria-fondo" ref={galeriaFondoRef}>
-                <span className="galeria-ascua galeria-ascua-1" />
-                <span className="galeria-ascua galeria-ascua-2" />
-                <span className="galeria-ascua galeria-ascua-3" />
-                <span className="galeria-ascua galeria-ascua-4" />
-                <span className="galeria-ascua galeria-ascua-5" />
-              </div>
               <div className="galeria-inner">
                 <h2 className="galeria-titulo">
-                  <span className="galeria-icono">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
-                  </span>
+                  <span className="titulo-bar" />
                   Nuestra cocina
                 </h2>
                 <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
@@ -1051,52 +1016,19 @@ export default function MenuPage() {
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
 
-        /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        /* colapsa/expande con altura animada (grid-rows 0fr⇄1fr) en vez de aparecer/desaparecer de golpe al cambiar de categoría */
+        /* ── GALERÍA: foto por foto, mazo apilado ── mismo lenguaje visual que el resto de la página (fondo claro, mismo
+           estilo de título y botones que las demás secciones), para que se sienta parte del sitio y no un bloque aparte ── */
         .galeria-colapsable { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 0.5s cubic-bezier(0.22,0.8,0.3,1), opacity 0.35s ease; }
         .galeria-colapsable.cerrado { grid-template-rows: 0fr; opacity: 0; }
         .galeria-colapsable-inner { overflow: hidden; min-height: 0; }
-        .galeria-seccion { position: relative; padding: 18px 0 16px; overflow: hidden; }
-        .galeria-fondo {
-          position: absolute; inset: -16px; z-index: 0; overflow: hidden; will-change: transform;
-          background:
-            radial-gradient(ellipse 60% 50% at 15% 15%, rgba(240,98,62,0.55) 0%, transparent 60%),
-            radial-gradient(ellipse 55% 45% at 85% 25%, rgba(217,165,52,0.42) 0%, transparent 60%),
-            radial-gradient(ellipse 65% 55% at 50% 95%, rgba(31,75,72,0.5) 0%, transparent 60%),
-            #1E1006;
-          background-size: 180% 180%, 180% 180%, 180% 180%, 100% 100%;
-          animation: galeria-fondo-flujo 16s ease-in-out infinite;
-        }
-        @keyframes galeria-fondo-flujo {
-          0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
-          50%      { background-position: 25% 30%, 75% 35%, 55% 75%, 0 0; }
-        }
-        .galeria-ascua {
-          position: absolute; bottom: -10px; width: 5px; height: 5px; border-radius: 50%;
-          background: #FFC97A; filter: blur(0.5px);
-          box-shadow: 0 0 9px 3px rgba(255,180,90,0.65);
-          opacity: 0; animation: ascua-subir 7s ease-in infinite;
-        }
-        .galeria-ascua-1 { left: 12%; animation-delay: 0s; }
-        .galeria-ascua-2 { left: 32%; width: 4px; height: 4px; animation-delay: 1.6s; }
-        .galeria-ascua-3 { left: 55%; animation-delay: 3.1s; }
-        .galeria-ascua-4 { left: 74%; width: 6px; height: 6px; animation-delay: 4.4s; }
-        .galeria-ascua-5 { left: 90%; width: 4px; height: 4px; animation-delay: 5.6s; }
-        @keyframes ascua-subir {
-          0%   { transform: translateY(0) scale(0.6); opacity: 0; }
-          18%  { opacity: 0.9; }
-          80%  { opacity: 0.35; }
-          100% { transform: translateY(-170px) scale(1.1); opacity: 0; }
-        }
+        .galeria-seccion { background: #fffbf5; border-bottom: 1px solid rgba(236,230,220,0.7); padding: 20px 0 22px; }
 
-        .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
-        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-        .galeria-icono { display: flex; color: #F0956F; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
-        @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
+        .galeria-inner { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 
         .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
-        .galeria-carta { position: absolute; inset: 0; border: none; padding: 0; margin: 0; cursor: grab; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 12px 26px rgba(0,0,0,0.35); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
+        .galeria-carta { position: absolute; inset: 0; border: 1px solid #ece6dc; padding: 0; margin: 0; cursor: grab; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 6px 18px rgba(34,32,28,0.14); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
         .galeria-carta:active { cursor: grabbing; }
         .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; -webkit-user-select: none; user-select: none; }
         .galeria-carta-p0 { transform: translateY(0) scale(1); z-index: 3; }
@@ -1105,21 +1037,18 @@ export default function MenuPage() {
         .galeria-carta-sale { transition: transform 0.48s cubic-bezier(0.5,-0.2,0.7,0.4), opacity 0.4s ease 0.15s; transform: translate(130%,-10%) rotate(16deg) scale(0.92) !important; opacity: 0 !important; z-index: 4 !important; }
         .galeria-sin-transicion { transition: none !important; }
 
-        .galeria-ubicacion { margin-top: 12px; padding-top: 12px; padding-bottom: 6px; border-top: 1px solid rgba(255,255,255,0.18); display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .galeria-direccion { display: flex; align-items: center; gap: 6px; color: #fffbf5; font-size: 12.5px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-        .galeria-direccion svg { color: #F0956F; flex-shrink: 0; }
+        .galeria-ubicacion { margin-top: 16px; padding-top: 14px; border-top: 1px solid #ece6dc; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .galeria-direccion { display: flex; align-items: center; gap: 6px; color: #55504a; font-size: 12.5px; font-weight: 600; }
+        .galeria-direccion svg { color: #F0623E; flex-shrink: 0; }
         .galeria-ubicacion-botones { display: flex; gap: 8px; width: 100%; max-width: 300px; }
-        .galeria-btn-primario { flex: 1; text-align: center; background: #F0623E; color: #fff; border: none; border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 700; text-decoration: none; transition: filter 0.15s; }
-        .galeria-btn-primario:hover { filter: brightness(1.08); }
-        .galeria-btn-secundario { flex: 1; background: rgba(255,255,255,0.08); color: #fffbf5; border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
-        .galeria-btn-secundario:hover { background: rgba(255,255,255,0.16); }
+        .galeria-btn-primario { flex: 1; text-align: center; background: #F0623E; color: #fff; border: none; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
+        .galeria-btn-primario:hover { background: #D94E2C; }
+        .galeria-btn-secundario { flex: 1; background: #f3efe6; color: #55504a; border: none; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
+        .galeria-btn-secundario:hover { background: #ece2d0; color: #22201c; }
 
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
-          .galeria-icono { animation: none; }
           .galeria-colapsable { transition: opacity 0.2s ease; }
-          .galeria-fondo { animation: none; }
-          .galeria-ascua { animation: none; opacity: 0; }
         }
 
         /* ── FOOTER ── */
