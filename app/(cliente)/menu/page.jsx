@@ -118,7 +118,6 @@ export default function MenuPage() {
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
-  const [flechaVisible, setFlechaVisible] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -129,7 +128,6 @@ export default function MenuPage() {
   }, []);
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
   const [headerAltura, setHeaderAltura] = useState(72);
-  const [recorridoCharco, setRecorridoCharco] = useState(500);
   const charcoInicioRef = useRef(null);
   const charcoEpochRef = useRef(null);
   const [carritoAnimDelay, setCarritoAnimDelay] = useState('0ms');
@@ -140,11 +138,6 @@ export default function MenuPage() {
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
-
-  // El charco vive junto a la foto mientras ese punto esté debajo de la barra sticky; en cuanto la barra lo tapa, salta a modo "pegado al header".
-  // Se calcula en el propio scroll (no con un IntersectionObserver) para reevaluar en cada frame contra la altura actual de la barra.
-  const headerAlturaRef = useRef(72);
-  useEffect(() => { headerAlturaRef.current = headerAltura; }, [headerAltura]);
 
   // Detecta cuando se llega al final de la página (footer) para que el charco y la flecha guía desaparezcan ahí
   useEffect(() => {
@@ -165,7 +158,6 @@ export default function MenuPage() {
     if (!el) return;
     function aplicarAltura(altura) {
       setHeaderAltura(altura);
-      setRecorridoCharco(Math.max(160, window.innerHeight - altura - 90));
     }
     aplicarAltura(el.offsetHeight || 72);
     const ro = new ResizeObserver(([entry]) => {
@@ -443,34 +435,11 @@ export default function MenuPage() {
     ...categorias.map(cat => ({ ...cat, count: productos.filter(p => p.categoria_id === cat.id).length })),
   ];
 
-  // ── Charco: aparece al pie de "Nuestra cocina" y, al perder de vista esa sección, queda pegado al header goteando hasta el pie de página ──
+  // ── Charco: sticky nativo — nace pegado a la foto (posición normal en el flujo) y, al scrollear, el propio navegador
+  // lo deja "pegado" debajo del header sin que haga falta ningún cálculo en JS. Se despega recién al llegar al pie de página.
   const mostrarCharco       = galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda;
-  const charcoViajeroVisible = mostrarCharco && !flechaVisible && !finPaginaVisible;
   const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
   const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
-
-  // El charco vive junto a la foto mientras ese punto esté debajo de la barra sticky; en cuanto la barra lo tapa, salta a modo "pegado al header".
-  useEffect(() => {
-    if (!mostrarCharco) { setFlechaVisible(true); return; }
-    let ticking = false;
-    function evaluar() {
-      ticking = false;
-      const el = charcoInicioRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      // sigue "visible" (modo local) mientras el punto de origen no haya quedado tapado por el header
-      setFlechaVisible(rect.bottom > headerAlturaRef.current);
-    }
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(evaluar);
-    }
-    evaluar();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
-  }, [mostrarCharco]);
 
   // Reloj maestro del charco: guarda el instante en que arrancan las animaciones de flecha/mancha/gota (se montan juntas y nunca se reinician)
   useEffect(() => {
@@ -539,39 +508,54 @@ export default function MenuPage() {
       </div>
 
       {/* ── GALERÍA: foto por foto, salto rápido y pausa ── solo se ve en "Todo" ── */}
-      {galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda && (
-        <>
-          <section className="galeria-seccion">
-            <div className="galeria-fondo" />
-            <div className="galeria-overlay" />
-            <div className="galeria-inner">
-              <h2 className="galeria-titulo">
-                <span className="galeria-icono">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
-                </span>
-                Nuestra cocina
-              </h2>
-              <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
+      {mostrarCharco && (
+        <section className="galeria-seccion">
+          <div className="galeria-fondo" />
+          <div className="galeria-overlay" />
+          <div className="galeria-inner">
+            <h2 className="galeria-titulo">
+              <span className="galeria-icono">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
+              </span>
+              Nuestra cocina
+            </h2>
+            <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
 
-              <div className="galeria-ubicacion">
-                <p className="galeria-direccion">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  San José, Guaymallén
-                </p>
-                <div className="galeria-ubicacion-botones">
-                  {config?.latitud_local && (
-                    <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                      Cómo llegar
-                    </a>
-                  )}
-                  <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
-                </div>
+            <div className="galeria-ubicacion">
+              <p className="galeria-direccion">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                San José, Guaymallén
+              </p>
+              <div className="galeria-ubicacion-botones">
+                {config?.latitud_local && (
+                  <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                    Cómo llegar
+                  </a>
+                )}
+                <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
+      )}
 
-          {/* el charco empieza justo donde termina el fondo de la cocina: onda + gota sobre el fondo claro de la página, sin nada oscuro detrás */}
-          <div className="galeria-charco-local" ref={charcoInicioRef} aria-hidden="true">
+      {mostrarCharco && (
+        /* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */
+        <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''}`} aria-hidden="true">
+          <span className="galeria-mancha" />
+          <div className="galeria-flecha-abajo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+      )}
+
+      {/* envuelve el charco junto con la navegación y los productos: le da "recorrido" para quedarse pegado (sticky) mientras
+          se scrollea todo el menú, y recién se despega cuando este bloque termina, justo antes del pie de página */}
+      <div className="contenido-scroll">
+        {mostrarCharco && (
+          // el mismo charco: nace pegado a la foto (posición normal) y, al scrollear, queda "sticky" debajo del header —
+          // es un único elemento que cambia de comportamiento, no uno que se apaga y otro que se prende
+          <div className="galeria-charco-local" ref={charcoInicioRef} style={{ top: headerAltura }} aria-hidden="true">
             <div className="galeria-goteo-wrap">
               <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
                 <defs>
@@ -601,64 +585,21 @@ export default function MenuPage() {
               <span className="galeria-gota" />
             </div>
           </div>
+        )}
 
-          {/* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */}
-          <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''}`} aria-hidden="true">
-            <span className="galeria-mancha" />
-            <div className="galeria-flecha-abajo">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        {!enBusqueda && (
+          <nav className="cat-nav cat-nav-abajo">
+            <div className="cat-nav-inner">
+              {todasCats.map(cat => (
+                <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
+                  {cat.nombre}
+                </button>
+              ))}
             </div>
-          </div>
+          </nav>
+        )}
 
-          {/* charco pegado al header: la onda (el charco en sí) + la gota, siempre montado para no perder sincronía; solo se oculta con opacidad */}
-          <div
-            className={`charco-viajero ${charcoViajeroVisible ? 'charco-viajero-visible' : ''}`}
-            style={{ top: headerAltura, '--recorrido': `${recorridoCharco}px` }}
-            aria-hidden="true"
-          >
-            <div className="charco-viajero-onda">
-              <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="quesoGradFijo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F7B267" />
-                    <stop offset="100%" stopColor="#F0623E" />
-                  </linearGradient>
-                </defs>
-                <path
-                  fill="url(#quesoGradFijo)"
-                  d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
-                >
-                  {!reduceMotion && (
-                    <animate
-                      attributeName="d"
-                      dur="4.8s"
-                      repeatCount="indefinite"
-                      values="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z;
-                              M0,0 L400,0 L400,8 C 385,8 381,21 368,21 C 355,21 351,12 338,12 C 322,12 317,29 300,29 C 283,29 279,14 262,14 C 244,14 238,18 216,18 C 194,18 189,9 170,9 C 152,9 147,23 130,23 C 113,23 109,8 92,8 C 75,8 70,22 52,22 C 35,22 31,12 15,12 C 7,12 3,8 0,10 Z;
-                              M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
-                    />
-                  )}
-                </path>
-              </svg>
-            </div>
-            <span className="charco-gota-viajera" />
-          </div>
-        </>
-      )}
-
-      {!enBusqueda && (
-        <nav className="cat-nav cat-nav-abajo">
-          <div className="cat-nav-inner">
-            {todasCats.map(cat => (
-              <button key={cat.id} className={`cat-btn ${categoriaActiva === cat.id ? 'activo' : ''}`} onClick={() => seleccionarCategoria(cat.id)}>
-                {cat.nombre}
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
-
-      <main className="main">
+        <main className="main">
         {enBusqueda && (
           <div className="busq-resultados">
             {sinResultados ? (
@@ -760,6 +701,7 @@ export default function MenuPage() {
           </>
         )}
       </main>
+      </div>
 
       {/* ── FOOTER ── */}
       <footer className="footer" ref={footerRef}>
@@ -1205,7 +1147,7 @@ export default function MenuPage() {
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
-        .galeria-charco-local { position: relative; z-index: 2; background: transparent; }
+        .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: #fffbf5; }
         .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .galeria-caida { position: relative; height: 108px; overflow: visible; }
@@ -1228,37 +1170,6 @@ export default function MenuPage() {
           68%  { transform: translateY(88px) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
           76%  { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
           100% { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
-        }
-
-        /* ── charco pegado al header: la onda (el charco en sí) + la gota, toma la posta apenas el header tapa el punto de origen, y recorre toda la pantalla goteando hasta el pie de página ── */
-        .charco-viajero {
-          position: fixed; left: 0; right: 0;
-          z-index: 38; pointer-events: none; opacity: 0;
-          transition: opacity 0.3s ease;
-          will-change: top;
-        }
-        .charco-viajero.charco-viajero-visible { opacity: 1; }
-        .charco-viajero-onda { position: relative; height: 18px; background: #fffbf5; }
-        .charco-viajero-onda .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-        .charco-gota-viajera {
-          position: absolute; top: 14px; right: 46px; width: 12px; height: 12px;
-          background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
-          box-shadow: 0 1px 3px rgba(178,58,30,0.35);
-          border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
-          transform-origin: top center;
-          animation: charco-cae-viajero 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
-        }
-        /* misma secuencia de desprendimiento que gota-cae, pero con recorrido dinámico (--recorrido) para el tramo de caída libre */
-        @keyframes charco-cae-viajero {
-          0%   { transform: translateY(-3px) translateX(0) scaleY(0.4) scaleX(1.15); opacity: 0.9; }
-          10%  { transform: translateY(-2px) translateX(0) scaleY(1) scaleX(0.85); opacity: 1; }
-          19%  { transform: translateY(3px) translateX(0) scaleY(1.7) scaleX(0.62); opacity: 1; }
-          23%  { transform: translateY(9px) translateX(0) scaleY(1) scaleX(1.1); opacity: 1; }
-          40%  { transform: translateY(calc(var(--recorrido, 500px) * 0.33)) translateX(-2px) scaleY(1.5) scaleX(1); opacity: 1; }
-          58%  { transform: translateY(calc(var(--recorrido, 500px) * 0.72)) translateX(2px) scaleY(2.1) scaleX(1); opacity: 1; }
-          68%  { transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
-          76%  { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); }
-          100% { opacity: 0; transform: translateY(var(--recorrido, 500px)) translateX(0) scaleY(2.7) scaleX(1); }
         }
 
         /* ── flecha: guía visual de que se puede seguir bajando (no es un botón), visible mientras se recorre el menú y hasta llegar al pie de página ── */
@@ -1324,7 +1235,7 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
-          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .charco-gota-viajera, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono, .galeria-goteo-wrap, .charco-viajero-onda { animation: none; }
+          .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono { animation: none; }
         }
 
         /* ── FOOTER ── */
