@@ -446,6 +446,15 @@ export default function MenuPage() {
     if (mostrarCharco && charcoEpochRef.current === null) charcoEpochRef.current = performance.now();
   }, [mostrarCharco]);
 
+  // Calcula, para CUALQUIER elemento sincronizado al charco (gota, mancha, flecha, carrito), el mismo desfasaje exacto
+  // respecto del reloj maestro — así todos quedan atados al MISMO instante real sin importar cuándo monta cada uno,
+  // y la gota SIEMPRE toca la flecha en el punto justo del ciclo (68%), sea cual sea el momento en que se dibujaron.
+  function faseDesdeEpoch(duracionMs = 3600) {
+    if (charcoEpochRef.current === null) return '0ms';
+    const transcurrido = performance.now() - charcoEpochRef.current;
+    return `${-(transcurrido % duracionMs)}ms`;
+  }
+
   // El carrito recién se monta al agregar el primer producto: en vez de arrancar su brillo en un instante al azar,
   // lo arranca ya desfasado a la misma fase del reloj maestro, para que ilumine justo en el mismo instante que la flecha
   useEffect(() => {
@@ -542,8 +551,8 @@ export default function MenuPage() {
       {mostrarCharco && (
         /* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */
         <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''}`} aria-hidden="true">
-          <span className="galeria-mancha" />
-          <div className="galeria-flecha-abajo">
+          <span className="galeria-mancha" style={{ animationDelay: faseDesdeEpoch() }} />
+          <div className="galeria-flecha-abajo" style={{ animationDelay: faseDesdeEpoch() }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
         </div>
@@ -582,7 +591,7 @@ export default function MenuPage() {
               </svg>
             </div>
             <div className="galeria-caida">
-              <span className="galeria-gota" />
+              <span className="galeria-gota" style={{ animationDelay: faseDesdeEpoch() }} />
             </div>
           </div>
         )}
