@@ -127,6 +127,8 @@ export default function MenuPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
+  const [charcoPegado, setCharcoPegado] = useState(false);
+  const charcoCentinelaRef = useRef(null);
   const [headerAltura, setHeaderAltura] = useState(72);
   const [distanciaGota, setDistanciaGota] = useState(320);
   const charcoInicioRef = useRef(null);
@@ -151,6 +153,22 @@ export default function MenuPage() {
     obs.observe(el);
     return () => obs.disconnect();
   }, [galeria.length, categoriaActiva, busqueda]);
+
+  // Detecta el instante EXACTO en que el charco pasa de su posición normal (junto a la foto) a quedar
+  // "pegado" (sticky) debajo del header. Se usa un centinela sin altura, ubicado justo donde el charco nace:
+  // mientras ese punto siga dentro de la pantalla (por debajo del header), el charco todavía NO se pegó.
+  // Recién cuando ese punto queda tapado por el header (sale del área observada) es que el sticky se activó
+  // de verdad — y solo ahí arranca el goteo. Antes de eso, charcoPegado es false y no hay ninguna gota.
+  useEffect(() => {
+    const el = charcoCentinelaRef.current;
+    if (!el || !mostrarCharco) { setCharcoPegado(false); return; }
+    const obs = new IntersectionObserver(
+      ([entry]) => setCharcoPegado(!entry.isIntersecting),
+      { threshold: 0, rootMargin: `-${headerAltura}px 0px 0px 0px` }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [mostrarCharco, headerAltura, categoriaActiva, busqueda]);
 
   // Mide la distancia REAL en pantalla entre el charco (pegado a top: headerAltura al hacer sticky) y la flecha
   // (fija abajo del todo), para que la gota siempre caiga exactamente hasta ahí, sea cual sea el alto del celular.
@@ -454,12 +472,15 @@ export default function MenuPage() {
   // lo deja "pegado" debajo del header sin que haga falta ningún cálculo en JS. Se despega recién al llegar al pie de página.
   const mostrarCharco       = galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda;
   const flechaGuiaVisible   = mostrarCharco && !finPaginaVisible && cantidad === 0;
-  const carritoIluminado    = mostrarCharco && !finPaginaVisible && cantidad > 0;
+  const carritoIluminado    = mostrarCharco && charcoPegado && !finPaginaVisible && cantidad > 0;
 
-  // Reloj maestro del charco: guarda el instante en que arrancan las animaciones de flecha/mancha/gota (se montan juntas y nunca se reinician)
+  // Reloj maestro del charco: arranca recién en el instante en que el charco queda pegado (sticky) al header —
+  // nunca antes. Si el usuario scrollea de nuevo hacia arriba y el charco se despega, el reloj se reinicia
+  // (vuelve a null), así que si vuelve a pegarse el goteo arranca de cero, nunca "viene arrastrando" nada.
   useEffect(() => {
-    if (mostrarCharco && charcoEpochRef.current === null) charcoEpochRef.current = performance.now();
-  }, [mostrarCharco]);
+    if (charcoPegado && charcoEpochRef.current === null) charcoEpochRef.current = performance.now();
+    if (!charcoPegado) charcoEpochRef.current = null;
+  }, [charcoPegado]);
 
   // Calcula, para CUALQUIER elemento sincronizado al charco (gota, mancha, flecha, carrito), el mismo desfasaje exacto
   // respecto del reloj maestro — así todos quedan atados al MISMO instante real sin importar cuándo monta cada uno,
@@ -473,11 +494,11 @@ export default function MenuPage() {
   // El carrito recién se monta al agregar el primer producto: en vez de arrancar su brillo en un instante al azar,
   // lo arranca ya desfasado a la misma fase del reloj maestro, para que ilumine justo en el mismo instante que la flecha
   useEffect(() => {
-    if (cantidad > 0 && charcoEpochRef.current !== null) {
+    if (cantidad > 0 && charcoPegado && charcoEpochRef.current !== null) {
       const transcurrido = performance.now() - charcoEpochRef.current;
       setCarritoAnimDelay(`${-(transcurrido % 3600)}ms`);
     }
-  }, [cantidad > 0]);
+  }, [cantidad > 0, charcoPegado]);
 
   return (
     <div className="pagina">
@@ -564,8 +585,10 @@ export default function MenuPage() {
       )}
 
       {mostrarCharco && (
-        /* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción */
-        <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''}`} aria-hidden="true">
+        /* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción.
+           La flecha en sí siempre está visible como guía; el brillo de "impacto" (charco-goteando) solo
+           corre una vez que el charco realmente está pegado (sticky) y empezó a gotear de verdad. */
+        <div className={`galeria-flecha-fixed ${flechaGuiaVisible ? 'flecha-visible' : ''} ${charcoPegado ? 'charco-goteando' : ''}`} aria-hidden="true">
           <span className="galeria-mancha" style={{ animationDelay: faseDesdeEpoch() }} />
           <div className="galeria-flecha-abajo" style={{ animationDelay: faseDesdeEpoch() }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -577,38 +600,48 @@ export default function MenuPage() {
           se scrollea todo el menú, y recién se despega cuando este bloque termina, justo antes del pie de página */}
       <div className="contenido-scroll">
         {mostrarCharco && (
-          // el mismo charco: nace pegado a la foto (posición normal) y, al scrollear, queda "sticky" debajo del header —
-          // es un único elemento que cambia de comportamiento, no uno que se apaga y otro que se prende
-          <div className="galeria-charco-local" ref={charcoInicioRef} style={{ top: headerAltura, '--dist-gota': `${distanciaGota}px` }} aria-hidden="true">
-            <div className="galeria-goteo-wrap">
-              <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="quesoGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F7B267" />
-                    <stop offset="100%" stopColor="#F0623E" />
-                  </linearGradient>
-                </defs>
-                <path
-                  fill="url(#quesoGrad)"
-                  d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
-                >
-                  {!reduceMotion && (
-                    <animate
-                      attributeName="d"
-                      dur="4.8s"
-                      repeatCount="indefinite"
-                      values="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z;
-                              M0,0 L400,0 L400,8 C 385,8 381,21 368,21 C 355,21 351,12 338,12 C 322,12 317,29 300,29 C 283,29 279,14 262,14 C 244,14 238,18 216,18 C 194,18 189,9 170,9 C 152,9 147,23 130,23 C 113,23 109,8 92,8 C 75,8 70,22 52,22 C 35,22 31,12 15,12 C 7,12 3,8 0,10 Z;
-                              M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
-                    />
-                  )}
-                </path>
-              </svg>
+          <>
+            {/* punto sin altura, ubicado exactamente donde nace el charco: mientras siga visible, el charco todavía
+                no se pegó al header. No tiene ningún estilo visual, es puramente un marcador para el observer. */}
+            <div ref={charcoCentinelaRef} className="charco-centinela" aria-hidden="true" />
+
+            {/* el mismo charco: nace pegado a la foto (posición normal) y, al scrollear, queda "sticky" debajo del header —
+                es un único elemento que cambia de comportamiento, no uno que se apaga y otro que se prende */}
+            <div className="galeria-charco-local" ref={charcoInicioRef} style={{ top: headerAltura, '--dist-gota': `${distanciaGota}px` }} aria-hidden="true">
+              <div className="galeria-goteo-wrap">
+                <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="quesoGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F7B267" />
+                      <stop offset="100%" stopColor="#F0623E" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    fill="url(#quesoGrad)"
+                    d="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                  >
+                    {!reduceMotion && (
+                      <animate
+                        attributeName="d"
+                        dur="4.8s"
+                        repeatCount="indefinite"
+                        values="M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z;
+                                M0,0 L400,0 L400,8 C 385,8 381,21 368,21 C 355,21 351,12 338,12 C 322,12 317,29 300,29 C 283,29 279,14 262,14 C 244,14 238,18 216,18 C 194,18 189,9 170,9 C 152,9 147,23 130,23 C 113,23 109,8 92,8 C 75,8 70,22 52,22 C 35,22 31,12 15,12 C 7,12 3,8 0,10 Z;
+                                M0,0 L400,0 L400,10 C 385,10 381,18 368,18 C 355,18 351,10 338,10 C 322,10 317,34 300,34 C 283,34 279,11 262,11 C 244,11 238,14 216,14 C 194,14 189,13 170,13 C 152,13 147,20 130,20 C 113,20 109,10 92,10 C 75,10 70,19 52,19 C 35,19 31,9 15,9 C 7,9 3,10 0,12 Z"
+                      />
+                    )}
+                  </path>
+                </svg>
+              </div>
+              <div className="galeria-caida">
+                {/* la gota NO existe en el DOM hasta que el charco está realmente pegado al header:
+                    así es literalmente imposible que haya goteo antes de ese instante */}
+                {charcoPegado && (
+                  <span className="galeria-gota" style={{ animationDelay: faseDesdeEpoch() }} />
+                )}
+              </div>
             </div>
-            <div className="galeria-caida">
-              <span className="galeria-gota" style={{ animationDelay: faseDesdeEpoch() }} />
-            </div>
-          </div>
+          </>
         )}
 
         {!enBusqueda && (
@@ -1171,6 +1204,7 @@ export default function MenuPage() {
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
+        .charco-centinela { position: relative; height: 0; margin: 0; padding: 0; pointer-events: none; }
         .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: transparent; pointer-events: none; }
         .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -1211,8 +1245,10 @@ export default function MenuPage() {
           background: radial-gradient(ellipse at center, rgba(240,98,62,0.45) 0%, rgba(247,178,103,0.28) 45%, rgba(240,98,62,0) 75%);
           border-radius: 50%; filter: blur(1.5px); pointer-events: none;
           opacity: 0; transform: scale(0.85);
-          animation: mancha-aparece 3.6s ease-in-out infinite;
         }
+        /* el brillo de "impacto" solo corre una vez que el charco está realmente pegado al header y goteando de verdad
+           (clase .charco-goteando en el contenedor); antes de eso no hay animación ninguna, quedan estáticos e invisibles */
+        .charco-goteando .galeria-mancha { animation: mancha-aparece 3.6s ease-in-out infinite; }
         /* el brillo solo aparece en el instante exacto en que la gota toca (68% del ciclo, igual que gota-cae/charco-cae-viajero): ni antes ni después */
         @keyframes mancha-aparece {
           0%, 66%  { opacity: 0; transform: scale(0.85); }
@@ -1225,8 +1261,8 @@ export default function MenuPage() {
           background: #fffbf5; color: #F0623E;
           display: flex; align-items: center; justify-content: center;
           box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-          animation: flecha-ilumina 3.6s ease-in-out infinite;
         }
+        .charco-goteando .galeria-flecha-abajo { animation: flecha-ilumina 3.6s ease-in-out infinite; }
         @keyframes flecha-ilumina {
           0%, 66%  { background: #fffbf5; box-shadow: 0 4px 14px rgba(0,0,0,0.22); color: #F0623E; }
           68%      { background: #F0623E; box-shadow: 0 0 22px 8px rgba(240,98,62,0.7); color: #fff; }
