@@ -159,11 +159,22 @@ export default function MenuPage() {
   // mientras ese punto siga dentro de la pantalla (por debajo del header), el charco todavía NO se pegó.
   // Recién cuando ese punto queda tapado por el header (sale del área observada) es que el sticky se activó
   // de verdad — y solo ahí arranca el goteo. Antes de eso, charcoPegado es false y no hay ninguna gota.
+  //
+  // OJO: "no intersecta" pasa en DOS casos distintos — (a) el centinela ya quedó tapado por el header arriba
+  // (esto SÍ es "pegado"), o (b) el centinela todavía está más abajo, fuera de la pantalla, porque recién
+  // cargó la página y ni siquiera se scrolleó hasta ahí (esto NO es "pegado"). Sin distinguir ambos casos,
+  // charcoPegado podía arrancar en true desde el vamos. Por eso se chequea también boundingClientRect.
   useEffect(() => {
     const el = charcoCentinelaRef.current;
     if (!el || !mostrarCharco) { setCharcoPegado(false); return; }
     const obs = new IntersectionObserver(
-      ([entry]) => setCharcoPegado(!entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCharcoPegado(false);
+        } else {
+          setCharcoPegado(entry.boundingClientRect.top < headerAltura);
+        }
+      },
       { threshold: 0, rootMargin: `-${headerAltura}px 0px 0px 0px` }
     );
     obs.observe(el);
@@ -1204,7 +1215,7 @@ export default function MenuPage() {
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
 
         /* ── el charco: onda de queso + gota, siempre sobre el fondo claro de la página (fuera de la sección oscura), arranca justo donde termina la foto ── */
-        .charco-centinela { position: relative; height: 0; margin: 0; padding: 0; pointer-events: none; }
+        .charco-centinela { position: relative; height: 1px; margin-bottom: -1px; padding: 0; pointer-events: none; }
         .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: transparent; pointer-events: none; }
         .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
