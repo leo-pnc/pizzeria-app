@@ -143,7 +143,7 @@ export default function MenuPage() {
       if (el) {
         const rect = el.parentElement.getBoundingClientRect();
         const desplazamiento = rect.top * 0.18;
-        el.style.transform = `translateY(${desplazamiento}px) scale(1.08)`;
+        el.style.transform = `translateY(${desplazamiento}px)`;
       }
       ticking = false;
     }
@@ -483,8 +483,13 @@ export default function MenuPage() {
         <div className={`galeria-colapsable ${mostrarGaleria ? '' : 'cerrado'}`}>
           <div className="galeria-colapsable-inner">
             <section className="galeria-seccion">
-              <div className="galeria-fondo" ref={galeriaFondoRef} />
-              <div className="galeria-overlay" />
+              <div className="galeria-fondo" ref={galeriaFondoRef}>
+                <span className="galeria-ascua galeria-ascua-1" />
+                <span className="galeria-ascua galeria-ascua-2" />
+                <span className="galeria-ascua galeria-ascua-3" />
+                <span className="galeria-ascua galeria-ascua-4" />
+                <span className="galeria-ascua galeria-ascua-5" />
+              </div>
               <div className="galeria-inner">
                 <h2 className="galeria-titulo">
                   <span className="galeria-icono">
@@ -1052,8 +1057,37 @@ export default function MenuPage() {
         .galeria-colapsable.cerrado { grid-template-rows: 0fr; opacity: 0; }
         .galeria-colapsable-inner { overflow: hidden; min-height: 0; }
         .galeria-seccion { position: relative; padding: 18px 0 16px; overflow: hidden; }
-        .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; will-change: transform; }
-        .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
+        .galeria-fondo {
+          position: absolute; inset: -16px; z-index: 0; overflow: hidden; will-change: transform;
+          background:
+            radial-gradient(ellipse 60% 50% at 15% 15%, rgba(240,98,62,0.55) 0%, transparent 60%),
+            radial-gradient(ellipse 55% 45% at 85% 25%, rgba(217,165,52,0.42) 0%, transparent 60%),
+            radial-gradient(ellipse 65% 55% at 50% 95%, rgba(31,75,72,0.5) 0%, transparent 60%),
+            #1E1006;
+          background-size: 180% 180%, 180% 180%, 180% 180%, 100% 100%;
+          animation: galeria-fondo-flujo 16s ease-in-out infinite;
+        }
+        @keyframes galeria-fondo-flujo {
+          0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+          50%      { background-position: 25% 30%, 75% 35%, 55% 75%, 0 0; }
+        }
+        .galeria-ascua {
+          position: absolute; bottom: -10px; width: 5px; height: 5px; border-radius: 50%;
+          background: #FFC97A; filter: blur(0.5px);
+          box-shadow: 0 0 9px 3px rgba(255,180,90,0.65);
+          opacity: 0; animation: ascua-subir 7s ease-in infinite;
+        }
+        .galeria-ascua-1 { left: 12%; animation-delay: 0s; }
+        .galeria-ascua-2 { left: 32%; width: 4px; height: 4px; animation-delay: 1.6s; }
+        .galeria-ascua-3 { left: 55%; animation-delay: 3.1s; }
+        .galeria-ascua-4 { left: 74%; width: 6px; height: 6px; animation-delay: 4.4s; }
+        .galeria-ascua-5 { left: 90%; width: 4px; height: 4px; animation-delay: 5.6s; }
+        @keyframes ascua-subir {
+          0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+          18%  { opacity: 0.9; }
+          80%  { opacity: 0.35; }
+          100% { transform: translateY(-170px) scale(1.1); opacity: 0; }
+        }
 
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fffbf5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
@@ -1084,6 +1118,8 @@ export default function MenuPage() {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
           .galeria-colapsable { transition: opacity 0.2s ease; }
+          .galeria-fondo { animation: none; }
+          .galeria-ascua { animation: none; opacity: 0; }
         }
 
         /* ── FOOTER ── */
