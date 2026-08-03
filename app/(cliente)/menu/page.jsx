@@ -128,6 +128,7 @@ export default function MenuPage() {
   }, []);
   const [finPaginaVisible, setFinPaginaVisible] = useState(false);
   const [headerAltura, setHeaderAltura] = useState(72);
+  const [distanciaGota, setDistanciaGota] = useState(320);
   const charcoInicioRef = useRef(null);
   const charcoEpochRef = useRef(null);
   const [carritoAnimDelay, setCarritoAnimDelay] = useState('0ms');
@@ -150,6 +151,20 @@ export default function MenuPage() {
     obs.observe(el);
     return () => obs.disconnect();
   }, [galeria.length, categoriaActiva, busqueda]);
+
+  // Mide la distancia REAL en pantalla entre el charco (pegado a top: headerAltura al hacer sticky) y la flecha
+  // (fija abajo del todo), para que la gota siempre caiga exactamente hasta ahí, sea cual sea el alto del celular.
+  useEffect(() => {
+    function calcularDistancia() {
+      const ALTURA_ONDA = 32;      // .galeria-goteo-wrap
+      const OFFSET_FLECHA = 18 + 20; // bottom de la flecha + mitad de su tamaño, para apuntar a su centro
+      const dist = window.innerHeight - headerAltura - ALTURA_ONDA - OFFSET_FLECHA;
+      setDistanciaGota(Math.max(dist, 80));
+    }
+    calcularDistancia();
+    window.addEventListener('resize', calcularDistancia);
+    return () => window.removeEventListener('resize', calcularDistancia);
+  }, [headerAltura]);
 
   // Sigue la altura REAL de la barra sticky (ahora constante, pero puede variar por resize/orientación/breakpoints),
   // para que el charco quede anclado exactamente a la altura del buscador y nunca se desfase
@@ -564,7 +579,7 @@ export default function MenuPage() {
         {mostrarCharco && (
           // el mismo charco: nace pegado a la foto (posición normal) y, al scrollear, queda "sticky" debajo del header —
           // es un único elemento que cambia de comportamiento, no uno que se apaga y otro que se prende
-          <div className="galeria-charco-local" ref={charcoInicioRef} style={{ top: headerAltura }} aria-hidden="true">
+          <div className="galeria-charco-local" ref={charcoInicioRef} style={{ top: headerAltura, '--dist-gota': `${distanciaGota}px` }} aria-hidden="true">
             <div className="galeria-goteo-wrap">
               <svg className="galeria-goteo-svg" viewBox="0 0 400 40" preserveAspectRatio="none">
                 <defs>
@@ -1159,7 +1174,7 @@ export default function MenuPage() {
         .galeria-charco-local { position: sticky; top: 0; z-index: 25; background: transparent; pointer-events: none; }
         .galeria-goteo-wrap { position: relative; height: 32px; z-index: 2; }
         .galeria-goteo-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-        .galeria-caida { position: relative; height: 108px; overflow: visible; }
+        .galeria-caida { position: relative; height: 4px; overflow: visible; }
         .galeria-gota {
           position: absolute; top: 0; right: 46px; width: 13px; height: 13px;
           background: linear-gradient(180deg, #F7B267 0%, #F0623E 100%);
@@ -1168,17 +1183,19 @@ export default function MenuPage() {
           transform-origin: top center;
           animation: gota-cae 3.6s cubic-bezier(0.45,0.05,0.55,1) infinite;
         }
-        /* 0%-22%: todavía pegada al charco, se estira formando un cuello fino; 22%: se desprende (snap) y recién ahí empieza a caer libre */
+        /* 0%-22%: todavía pegada al charco, se estira formando un cuello fino; 23% en adelante: se desprende (snap)
+           y cae en línea recta hasta tocar la flecha EXACTO en el 76% — el recorrido (var(--dist-gota)) se mide en
+           tiempo real contra la posición de la flecha, así que la gota SIEMPRE aterriza ahí, sea cual sea el alto de pantalla */
         @keyframes gota-cae {
           0%   { transform: translateY(-3px) translateX(0) scaleY(0.4) scaleX(1.15); opacity: 0.9; }
           10%  { transform: translateY(-2px) translateX(0) scaleY(1) scaleX(0.85); opacity: 1; }
           19%  { transform: translateY(3px) translateX(0) scaleY(1.7) scaleX(0.62); opacity: 1; }
           23%  { transform: translateY(9px) translateX(0) scaleY(1) scaleX(1.1); opacity: 1; }
-          40%  { transform: translateY(30px) translateX(-2px) scaleY(1.5) scaleX(1); opacity: 1; }
-          58%  { transform: translateY(66px) translateX(2px) scaleY(2.1) scaleX(1); opacity: 1; }
-          68%  { transform: translateY(88px) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
-          76%  { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
-          100% { opacity: 0; transform: translateY(92px) translateX(0) scaleY(2.7) scaleX(1); }
+          40%  { transform: translateY(calc(var(--dist-gota, 108px) * 0.33)) translateX(-2px) scaleY(1.5) scaleX(1); opacity: 1; }
+          58%  { transform: translateY(calc(var(--dist-gota, 108px) * 0.72)) translateX(2px) scaleY(2.1) scaleX(1); opacity: 1; }
+          68%  { transform: translateY(calc(var(--dist-gota, 108px) * 0.96)) translateX(0) scaleY(2.7) scaleX(1); opacity: 0.9; }
+          76%  { opacity: 0; transform: translateY(var(--dist-gota, 108px)) translateX(0) scaleY(2.7) scaleX(1); }
+          100% { opacity: 0; transform: translateY(var(--dist-gota, 108px)) translateX(0) scaleY(2.7) scaleX(1); }
         }
 
         /* ── flecha: guía visual de que se puede seguir bajando (no es un botón), visible mientras se recorre el menú y hasta llegar al pie de página ── */
