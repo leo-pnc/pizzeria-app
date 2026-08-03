@@ -595,6 +595,65 @@ export default function MenuPage() {
         </section>
       )}
 
+      {/* ── BIENVENIDA: goteo grande + "Deslizá para ver más" + splash con flecha. Es contenido normal (no sticky,
+           no fijo a la pantalla): aparece una sola vez, justo debajo de la foto, y se va con el scroll como
+           cualquier otro contenido. El charco que se pega al header más abajo es un elemento aparte. ── */}
+      {mostrarCharco && (
+        <div className="cocina-bienvenida" aria-hidden="true">
+          <div className="cocina-goteo-grande">
+            <svg className="cocina-goteo-grande-svg" viewBox="0 0 400 150" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="quesoGrandeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#FBC85D" />
+                  <stop offset="55%" stopColor="#F3A23B" />
+                  <stop offset="100%" stopColor="#E67A2E" />
+                </linearGradient>
+              </defs>
+              {/* barra superior continua, de donde "cuelgan" todos los dedos de queso */}
+              <rect x="0" y="0" width="400" height="15" fill="url(#quesoGrandeGrad)" />
+              {/* cada dedo: mismo patrón (arranca ancho arriba, se afina y termina en punta redondeada) con largo variable */}
+              {[
+                { cx: 14,  w: 13, l: 38 },
+                { cx: 46,  w: 17, l: 92 },
+                { cx: 82,  w: 14, l: 52 },
+                { cx: 117, w: 19, l: 122 },
+                { cx: 154, w: 15, l: 60 },
+                { cx: 190, w: 18, l: 108 },
+                { cx: 226, w: 13, l: 46 },
+                { cx: 261, w: 20, l: 133 },
+                { cx: 299, w: 15, l: 66 },
+                { cx: 335, w: 18, l: 98 },
+                { cx: 372, w: 13, l: 42 },
+              ].map((d, i) => (
+                <path
+                  key={i}
+                  fill="url(#quesoGrandeGrad)"
+                  d={`M${d.cx - d.w},0 L${d.cx - d.w},${d.l * 0.28} C${d.cx - d.w},${d.l * 0.55} ${d.cx - d.w * 0.55},${d.l * 0.86} ${d.cx},${d.l} C${d.cx + d.w * 0.55},${d.l * 0.86} ${d.cx + d.w},${d.l * 0.55} ${d.cx + d.w},${d.l * 0.28} L${d.cx + d.w},0 Z`}
+                />
+              ))}
+              {/* brillo: un par de trazos más claros sobre los dedos más largos, para dar aspecto glaseado/húmedo */}
+              <ellipse cx="112" cy="58" rx="3" ry="34" fill="rgba(255,255,255,0.32)" />
+              <ellipse cx="256" cy="66" rx="3.2" ry="38" fill="rgba(255,255,255,0.32)" />
+              <ellipse cx="330" cy="46" rx="2.6" ry="26" fill="rgba(255,255,255,0.28)" />
+            </svg>
+            {/* gotita suelta, separada del dedo más largo, flotando en el aire justo antes de caer al charco de abajo */}
+            <span className="cocina-gotita-suelta" />
+          </div>
+
+          <p className="cocina-deslizar-texto">Deslizá para ver más</p>
+          <svg className="cocina-deslizar-flecha-arriba" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v15M12 19l-6-6M12 19l6-6"/></svg>
+
+          <div className="cocina-splash">
+            <span className="cocina-splash-anillo cocina-splash-anillo-1" />
+            <span className="cocina-splash-anillo cocina-splash-anillo-2" />
+            <span className="cocina-splash-anillo cocina-splash-anillo-3" />
+            <span className="cocina-splash-boton">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+        </div>
+      )}
+
       {mostrarCharco && (
         /* guía visual de que se puede seguir bajando: no es un botón, no dispara ninguna acción.
            La flecha en sí siempre está visible como guía; el brillo de "impacto" (charco-goteando) solo
@@ -985,7 +1044,7 @@ export default function MenuPage() {
         html { scroll-behavior: smooth; }
         body { background: #fffbf5; color: #22201c; font-family: 'Work Sans', system-ui, sans-serif; }
 
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap');
 
         /* ── HERO: subtítulo + estado. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
         .header-hero { max-width: 760px; margin: 0 auto; padding: 6px 16px 0; }
@@ -1285,6 +1344,41 @@ export default function MenuPage() {
         .galeria-icono { display: flex; color: #F0956F; animation: galeria-icono-mover 2.2s ease-in-out infinite; }
         @keyframes galeria-icono-mover { 0%,100%{ transform: rotate(0deg) scale(1); } 50%{ transform: rotate(-10deg) scale(1.18); } }
 
+        /* ── BIENVENIDA: goteo grande + "Deslizá para ver más" + splash. Contenido normal, no sticky, se va con el scroll ── */
+        .cocina-bienvenida { position: relative; background: #fffbf5; text-align: center; overflow: visible; padding-bottom: 6px; }
+        .cocina-goteo-grande { position: relative; height: 150px; margin-top: -2px; }
+        .cocina-goteo-grande-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .cocina-gotita-suelta {
+          position: absolute; left: 65.2%; top: 158px; width: 11px; height: 13px; margin-left: -5.5px;
+          background: linear-gradient(180deg, #FBC85D 0%, #E67A2E 100%);
+          box-shadow: 0 2px 4px rgba(178,88,20,0.3);
+          border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+          animation: gotita-flotar 2.6s ease-in-out infinite;
+        }
+        @keyframes gotita-flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+
+        .cocina-deslizar-texto { font-family: 'Caveat', cursive; font-size: 23px; font-weight: 700; color: #A85A2A; margin: 8px 0 0; line-height: 1; }
+        .cocina-deslizar-flecha-arriba { display: block; margin: 3px auto 0; color: #A85A2A; animation: cocina-flecha-rebote 1.6s ease-in-out infinite; }
+        @keyframes cocina-flecha-rebote { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+        .cocina-splash { position: relative; width: 100%; max-width: 220px; height: 60px; margin: 16px auto 4px; }
+        .cocina-splash-anillo {
+          position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+          border: 2px solid rgba(240,169,63,0.5); border-radius: 50%;
+          animation: cocina-splash-respirar 2.8s ease-in-out infinite;
+        }
+        .cocina-splash-anillo-1 { width: 48px; height: 17px; }
+        .cocina-splash-anillo-2 { width: 100px; height: 32px; animation-delay: 0.3s; }
+        .cocina-splash-anillo-3 { width: 160px; height: 48px; animation-delay: 0.6s; }
+        @keyframes cocina-splash-respirar { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+        .cocina-splash-boton {
+          position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+          width: 42px; height: 42px; border-radius: 50%; z-index: 2;
+          background: #fffbf5; color: #F0623E;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+        }
+
         .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
         .galeria-carta { position: absolute; inset: 0; border: none; padding: 0; margin: 0; cursor: grab; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 12px 26px rgba(0,0,0,0.35); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
@@ -1309,6 +1403,7 @@ export default function MenuPage() {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
           .galeria-gota, .galeria-mancha, .galeria-flecha-abajo, .barra-carrito-brillo, .barra-carrito-brillo .barra-carrito-icono { animation: none; }
+          .cocina-gotita-suelta, .cocina-deslizar-flecha-arriba, .cocina-splash-anillo { animation: none; }
         }
 
         /* ── FOOTER ── */
