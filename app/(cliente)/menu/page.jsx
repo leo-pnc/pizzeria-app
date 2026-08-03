@@ -127,10 +127,36 @@ export default function MenuPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
   const heroRef       = useRef(null);
+  const galeriaFondoRef = useRef(null);
 
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
+
+  // Parallax sutil: el fondo de "Nuestra cocina" se mueve un poco más lento que el resto al hacer scroll,
+  // para que se sienta con profundidad real (como detrás de una ventana) en vez de un bloque plano pegado.
+  useEffect(() => {
+    if (galeria.length === 0 || reduceMotion) return;
+    let ticking = false;
+    function actualizar() {
+      const el = galeriaFondoRef.current;
+      if (el) {
+        const rect = el.parentElement.getBoundingClientRect();
+        const desplazamiento = rect.top * 0.18;
+        el.style.transform = `translateY(${desplazamiento}px) scale(1.08)`;
+      }
+      ticking = false;
+    }
+    function alScrollear() {
+      if (!ticking) {
+        requestAnimationFrame(actualizar);
+        ticking = true;
+      }
+    }
+    actualizar();
+    window.addEventListener('scroll', alScrollear, { passive: true });
+    return () => window.removeEventListener('scroll', alScrollear);
+  }, [galeria.length, reduceMotion]);
 
   // El header ya no cambia de tamaño con JS: la parte "de más" (subtítulo + estado) vive en el flujo normal
   // de la página y se va con el scroll de forma nativa. Lo único que queda atado a un IntersectionObserver
@@ -452,36 +478,40 @@ export default function MenuPage() {
 
       </div>
 
-      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── solo se ve en "Todo" ── */}
-      {mostrarGaleria && (
-        <section className="galeria-seccion">
-          <div className="galeria-fondo" />
-          <div className="galeria-overlay" />
-          <div className="galeria-inner">
-            <h2 className="galeria-titulo">
-              <span className="galeria-icono">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
-              </span>
-              Nuestra cocina
-            </h2>
-            <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
+      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── se colapsa suavemente al elegir una categoría, en vez de desaparecer de golpe ── */}
+      {galeria.length > 0 && (
+        <div className={`galeria-colapsable ${mostrarGaleria ? '' : 'cerrado'}`}>
+          <div className="galeria-colapsable-inner">
+            <section className="galeria-seccion">
+              <div className="galeria-fondo" ref={galeriaFondoRef} />
+              <div className="galeria-overlay" />
+              <div className="galeria-inner">
+                <h2 className="galeria-titulo">
+                  <span className="galeria-icono">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2c-3 3-4 6-4 9a4 4 0 0 0 8 0c0-1-.5-2-1-3 .5 2-1 3-1 3 .5-2-1-4-2-4 0 2-1 3-2 3 0-3 1-5 2-8z"/><path d="M6 14a6 6 0 0 0 12 0"/></svg>
+                  </span>
+                  Nuestra cocina
+                </h2>
+                <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
 
-            <div className="galeria-ubicacion">
-              <p className="galeria-direccion">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                San José, Guaymallén
-              </p>
-              <div className="galeria-ubicacion-botones">
-                {config?.latitud_local && (
-                  <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                    Cómo llegar
-                  </a>
-                )}
-                <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
+                <div className="galeria-ubicacion">
+                  <p className="galeria-direccion">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    San José, Guaymallén
+                  </p>
+                  <div className="galeria-ubicacion-botones">
+                    {config?.latitud_local && (
+                      <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                        Cómo llegar
+                      </a>
+                    )}
+                    <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
-        </section>
+        </div>
       )}
 
       {/* ── envuelve la navegación y los productos ── */}
@@ -1017,9 +1047,12 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
 
         /* ── GALERÍA: foto por foto, mazo apilado, con fondo de cocina ── pensada para entrar en una sola pantalla ── */
-        .galeria-seccion { position: relative; padding: 18px 0 16px; overflow: hidden; animation: galeria-aparecer 0.45s cubic-bezier(0.22,0.8,0.3,1) both; }
-        @keyframes galeria-aparecer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; }
+        /* colapsa/expande con altura animada (grid-rows 0fr⇄1fr) en vez de aparecer/desaparecer de golpe al cambiar de categoría */
+        .galeria-colapsable { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 0.5s cubic-bezier(0.22,0.8,0.3,1), opacity 0.35s ease; }
+        .galeria-colapsable.cerrado { grid-template-rows: 0fr; opacity: 0; }
+        .galeria-colapsable-inner { overflow: hidden; min-height: 0; }
+        .galeria-seccion { position: relative; padding: 18px 0 16px; overflow: hidden; }
+        .galeria-fondo { position: absolute; inset: -12px; background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=70'); background-size: cover; background-position: center 40%; filter: blur(5px) brightness(0.6) saturate(1.15); transform: scale(1.08); z-index: 0; will-change: transform; }
         .galeria-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,12,7,0.55) 0%, rgba(18,12,7,0.78) 65%, rgba(18,12,7,0.9) 100%); z-index: 0; }
 
         .galeria-inner { position: relative; max-width: 760px; margin: 0 auto; padding: 0 16px; z-index: 1; }
@@ -1050,6 +1083,7 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
           .galeria-icono { animation: none; }
+          .galeria-colapsable { transition: opacity 0.2s ease; }
         }
 
         /* ── FOOTER ── */
