@@ -436,7 +436,12 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
             <div className="ch-confirmacion-check">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h2 className="ch-confirmacion-titulo">¡Directo a la cocina!</h2>
+            <h2 className="ch-confirmacion-titulo">
+              <span className="icono-llama">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-1.5 3-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1.5-4 .2 1.5-.7 2.5-1.5 2.5.5-2-.5-4-2-5 .3 1.5-.5 2-1 1.5.5-2 .5-3.5 1-5z"/></svg>
+              </span>
+              ¡Directo a la cocina!
+            </h2>
             <p className="ch-confirmacion-texto">
               {cliente.nombre ? `Gracias, ${cliente.nombre.split(' ')[0]}. ` : 'Gracias. '}
               Ya abrimos WhatsApp con tu pedido armado — solo falta que apretes <strong>Enviar</strong> ahí para confirmarlo.
@@ -944,7 +949,9 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
           animation: confirmacion-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
         }
         @keyframes confirmacion-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
-        .ch-confirmacion-titulo { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #1a1510; margin: 0; }
+        .ch-confirmacion-titulo { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #1a1510; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .icono-llama { color: #F0623E; display: inline-flex; flex-shrink: 0; animation: llama-titilar 2.4s ease-in-out infinite; }
+        @keyframes llama-titilar { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(-3deg); } }
         .ch-confirmacion-texto { font-size: 13.5px; color: #6b6259; line-height: 1.55; margin: 8px 0 4px; max-width: 320px; }
         .ch-confirmacion-texto strong { color: #1a1510; }
         .ch-confirmacion-reintentar {
@@ -955,6 +962,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-confirmacion-listo { margin-top: 18px; }
         @media (prefers-reduced-motion: reduce) {
           .ch-confirmacion-check { animation: none; }
+          .icono-llama { animation: none; }
         }
       `}</style>
     </>

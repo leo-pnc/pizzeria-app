@@ -419,6 +419,9 @@ export default function MenuPage() {
           <img src="/logo.png" alt="" className="marca-splash-logo" />
           <p className="marca-splash-nombre">Don Adriano's</p>
           <p className="marca-splash-frase">
+            <span className="icono-llama">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-1.5 3-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1.5-4 .2 1.5-.7 2.5-1.5 2.5.5-2-.5-4-2-5 .3 1.5-.5 2-1 1.5.5-2 .5-3.5 1-5z"/></svg>
+            </span>
             Amasando la página
             <span className="marca-splash-puntos"><span>.</span><span>.</span><span>.</span></span>
           </p>
@@ -482,6 +485,9 @@ export default function MenuPage() {
               <div className="galeria-inner">
                 <h2 className="galeria-titulo">
                   <span className="titulo-bar" />
+                  <span className="icono-llama">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-1.5 3-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1.5-4 .2 1.5-.7 2.5-1.5 2.5.5-2-.5-4-2-5 .3 1.5-.5 2-1 1.5.5-2 .5-3.5 1-5z"/></svg>
+                  </span>
                   Nuestra cocina
                 </h2>
                 <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
@@ -855,7 +861,13 @@ export default function MenuPage() {
         @media (prefers-reduced-motion: reduce) {
           .marca-splash-logo { animation: none; }
           .marca-splash-puntos span { animation: none; opacity: 0.6; }
+          .icono-llama { animation: none; }
         }
+
+        /* ── ELEMENTO GRÁFICO PROPIO: la llama se repite en los puntos donde se habla de cocina/horno
+           (pantalla de carga, "Nuestra cocina", confirmación de pedido) ── vuelve reconocible a la marca ── */
+        .icono-llama { color: #F0623E; display: inline-flex; flex-shrink: 0; animation: llama-titilar 2.4s ease-in-out infinite; }
+        @keyframes llama-titilar { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(-3deg); } }
 
         /* ── HERO: subtítulo + estado. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
         .header-hero { max-width: 760px; margin: 0 auto; padding: 6px 16px 0; }
