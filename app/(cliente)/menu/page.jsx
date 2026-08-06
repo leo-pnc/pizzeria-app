@@ -118,6 +118,7 @@ export default function MenuPage() {
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
+  const [fotoAmpliada, setFotoAmpliada]   = useState(null); // { url, alt } de la foto de un producto/promo en grande
   const [splashListo, setSplashListo]     = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
@@ -277,7 +278,10 @@ export default function MenuPage() {
 
     return (
       <div className={`card ${!disponible ? 'card-agotado' : ''}`}>
-        <div className="card-img-wrap">
+        <div
+          className={`card-img-wrap ${prod.imagen_url ? 'card-img-clicable' : ''}`}
+          onClick={() => prod.imagen_url && setFotoAmpliada({ url: prod.imagen_url, alt: prod.nombre })}
+        >
           {prod.imagen_url
             ? <img className="card-img" src={prod.imagen_url} alt={prod.nombre} />
             : <div className="card-img-ph"><span>Sin foto</span></div>
@@ -360,7 +364,10 @@ export default function MenuPage() {
 
     return (
       <div className="card card-promo">
-        <div className="card-img-wrap">
+        <div
+          className={`card-img-wrap ${promo.imagen_url ? 'card-img-clicable' : ''}`}
+          onClick={() => promo.imagen_url && setFotoAmpliada({ url: promo.imagen_url, alt: promo.nombre })}
+        >
           {promo.imagen_url
             ? <img className="card-img" src={promo.imagen_url} alt={promo.nombre} />
             : <div className="card-img-ph card-img-ph-promo"><span>Promo</span></div>
@@ -708,6 +715,16 @@ export default function MenuPage() {
         </div>
       )}
 
+      {/* ── LIGHTBOX DE FOTO DE PRODUCTO/PROMO ── */}
+      {fotoAmpliada && (
+        <div className="lightbox-backdrop" onClick={() => setFotoAmpliada(null)}>
+          <button className="lightbox-close" onClick={() => setFotoAmpliada(null)}>✕</button>
+          <div className="lightbox-contenido" onClick={e => e.stopPropagation()}>
+            <img src={fotoAmpliada.url} alt={fotoAmpliada.alt || ''} />
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL DE HORARIOS ── */}
       {modalHorarios && (
         <div className="modal-horarios-backdrop" onClick={() => setModalHorarios(false)}>
@@ -991,6 +1008,7 @@ export default function MenuPage() {
         .card-promo { border-color: rgba(61,74,47,0.25); }
 
         .card-img-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #f3efe6; }
+        .card-img-clicable { cursor: zoom-in; }
         .card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .card-img-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c4bcae; font-size: 12px; }
         .card-img-ph-promo { background: linear-gradient(135deg, #f3efe6, #eae3d4); }
