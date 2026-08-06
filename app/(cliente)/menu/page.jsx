@@ -552,7 +552,7 @@ export default function MenuPage() {
             {hayProductosNuevos && categoriaActiva === '__nuevo__' && (
               <section className="seccion">
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-nuevo" />Nuevo</h2>
-                <div className="grilla">
+                <div className="grilla grilla-lista">
                   {productos.filter(p => p.es_nuevo).map(p => <TarjetaProducto key={p.id} prod={p} />)}
                 </div>
               </section>
@@ -577,7 +577,7 @@ export default function MenuPage() {
                     <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
                   </div>
                 ) : (
-                  <div className="grilla">
+                  <div className="grilla grilla-lista">
                     {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
                   </div>
                 )}
@@ -610,7 +610,7 @@ export default function MenuPage() {
                         <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
                       </div>
                     ) : (
-                      <div className="grilla">
+                      <div className="grilla grilla-lista">
                         {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
                       </div>
                     )}
@@ -944,6 +944,17 @@ export default function MenuPage() {
 
         .grilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .grilla { gap: 14px; } }
+
+        /* ── Lista de categoría (una tarjeta alargada por fila, de extremo a extremo) ── */
+        .grilla-lista { grid-template-columns: 1fr; gap: 10px; }
+        .grilla-lista .card { flex-direction: row; }
+        .grilla-lista .card-img-wrap { width: 110px; min-width: 110px; aspect-ratio: 1/1; }
+        .grilla-lista .card-body { flex: 1; min-width: 0; padding: 10px 12px; gap: 4px; }
+        .grilla-lista .card-nombre { min-height: 0; -webkit-line-clamp: 1; }
+        .grilla-lista .card-desc { min-height: 0; }
+        .grilla-lista .card-footer { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 6px; }
+        .grilla-lista .card-variantes { gap: 6px; }
+        @media (min-width: 480px) { .grilla-lista .card-img-wrap { width: 130px; min-width: 130px; } }
 
         .fila-horizontal {
           display: flex;
