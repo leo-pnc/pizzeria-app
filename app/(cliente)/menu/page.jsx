@@ -118,6 +118,7 @@ export default function MenuPage() {
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
   const [galeria, setGaleria]             = useState([]);
   const [lightboxIdx, setLightboxIdx]     = useState(null);
+  const [splashListo, setSplashListo]     = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -131,6 +132,15 @@ export default function MenuPage() {
   const navRef      = useRef(null);
 
   useEffect(() => { cargar(); }, []);
+
+  // Momento de marca: la pantalla de carga inicial deja de ser un blanco vacío mientras se trae la info.
+  // Se queda un mínimo de tiempo aunque la carga sea instantánea, para que no parpadee.
+  useEffect(() => {
+    if (config) {
+      const t = setTimeout(() => setSplashListo(true), 550);
+      return () => clearTimeout(t);
+    }
+  }, [config]);
 
   // El header ya no cambia de tamaño con JS: la parte "de más" (subtítulo + estado) vive en el flujo normal
   // de la página y se va con el scroll de forma nativa. Lo único que queda atado a un IntersectionObserver
@@ -402,6 +412,18 @@ export default function MenuPage() {
 
   return (
     <div className="pagina">
+
+      {/* ── MOMENTO DE MARCA: pantalla de carga inicial, en vez de blanco vacío mientras se traen los datos ── */}
+      {!splashListo && (
+        <div className={`marca-splash ${config ? 'marca-splash-salir' : ''}`} aria-hidden={config ? 'true' : undefined}>
+          <img src="/logo.png" alt="" className="marca-splash-logo" />
+          <p className="marca-splash-nombre">Don Adriano's</p>
+          <p className="marca-splash-frase">
+            Amasando la página
+            <span className="marca-splash-puntos"><span>.</span><span>.</span><span>.</span></span>
+          </p>
+        </div>
+      )}
 
       {/* ── HERO: subtítulo + estado. Vive en el flujo normal de la página (no es sticky), así que se va con el scroll
            de forma 100% nativa del navegador, sin ningún JS que decida "cuándo". Esto es lo que hace que arriba del todo
@@ -810,6 +832,30 @@ export default function MenuPage() {
         body { background: #fffbf5; color: #22201c; font-family: 'Work Sans', system-ui, sans-serif; }
 
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+        /* ── MOMENTO DE MARCA: pantalla de carga inicial ── */
+        .marca-splash {
+          position: fixed; inset: 0; z-index: 100; background: #fffbf5;
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+          transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .marca-splash-salir { opacity: 0; transform: scale(1.03); pointer-events: none; }
+        .marca-splash-logo {
+          width: 82px; height: 82px; object-fit: contain; border-radius: 50%;
+          border: 3px solid #F0623E; background: #fff; padding: 4px;
+          animation: splash-respirar 2.1s ease-in-out infinite;
+        }
+        @keyframes splash-respirar { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+        .marca-splash-nombre { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #22201c; }
+        .marca-splash-frase { font-size: 13px; color: #8a8378; display: flex; align-items: center; gap: 2px; }
+        .marca-splash-puntos span { animation: splash-punto 1.4s infinite; opacity: 0.2; }
+        .marca-splash-puntos span:nth-child(2) { animation-delay: 0.2s; }
+        .marca-splash-puntos span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes splash-punto { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+          .marca-splash-logo { animation: none; }
+          .marca-splash-puntos span { animation: none; opacity: 0.6; }
+        }
 
         /* ── HERO: subtítulo + estado. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
         .header-hero { max-width: 760px; margin: 0 auto; padding: 6px 16px 0; }
