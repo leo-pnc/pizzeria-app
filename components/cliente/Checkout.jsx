@@ -70,6 +70,8 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
   const [guardandoPedido, setGuardandoPedido] = useState(false);
   const [errorGuardado, setErrorGuardado]     = useState('');
   const [errorPaso, setErrorPaso]             = useState(null);
+  const [pedidoConfirmado, setPedidoConfirmado] = useState(false);
+  const ultimoMensajeRef = useRef(null);
 
   const hidratado = useRef(false);
   const [borradorRestaurado, setBorradorRestaurado] = useState(false);
@@ -340,11 +342,16 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
       indicaciones, modoDireccion, latitud: ubicacion?.lat || null, longitud: ubicacion?.lng || null, dist: ubicacion?.dist || null,
     });
 
+    ultimoMensajeRef.current = mensaje;
     abrirWhatsApp(config.whatsapp_numero, mensaje);
     limpiarBorradorCheckout();
     setGuardandoPedido(false);
     vaciar();
-    onClose();
+    setPedidoConfirmado(true);
+  }
+
+  function reintentarWhatsapp() {
+    if (ultimoMensajeRef.current) abrirWhatsApp(config.whatsapp_numero, ultimoMensajeRef.current);
   }
 
   const pasoIdx = PASOS.indexOf(paso);
@@ -423,6 +430,25 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
     <>
       <div className="ch-backdrop" onClick={onClose} />
       <div className="ch-drawer" ref={drawerRef}>
+        {pedidoConfirmado ? (
+          <div className="ch-confirmacion">
+            <button className="ch-close ch-close-confirmacion" onClick={onClose}>✕</button>
+            <div className="ch-confirmacion-check">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h2 className="ch-confirmacion-titulo">¡Directo a la cocina!</h2>
+            <p className="ch-confirmacion-texto">
+              {cliente.nombre ? `Gracias, ${cliente.nombre.split(' ')[0]}. ` : 'Gracias. '}
+              Ya abrimos WhatsApp con tu pedido armado — solo falta que apretes <strong>Enviar</strong> ahí para confirmarlo.
+            </p>
+            <button className="ch-confirmacion-reintentar" onClick={reintentarWhatsapp}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+              ¿No se abrió WhatsApp? Reintentar
+            </button>
+            <button className="ch-btn-primario ch-confirmacion-listo" onClick={onClose}>Listo</button>
+          </div>
+        ) : (
+          <>
         <div className="ch-arrastrable" onTouchStart={onArrastreInicio} onTouchMove={onArrastreMover} onTouchEnd={onArrastreFin} onPointerDown={onArrastreInicio} onPointerMove={onArrastreMover} onPointerUp={onArrastreFin}>
           <div className="ch-handle" />
           <div className="ch-header">
@@ -751,6 +777,8 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
             )
           )}
         </div>
+          </>
+        )}
       </div>
 
       <style jsx global>{`
@@ -774,7 +802,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-step { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
         .ch-step:not(:last-child)::after { content: ''; width: 14px; height: 1px; background: #ddd8d0; margin: 0 3px; }
         .ch-step-dot { width: 20px; height: 20px; border-radius: 50%; background: #ddd8d0; color: #9a8f82; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .ch-step-done .ch-step-dot { background: #e23e45; color: #fff; }
+        .ch-step-done .ch-step-dot { background: #F0623E; color: #fff; }
         .ch-step-label { font-size: 10px; color: #9a8f82; white-space: nowrap; }
         .ch-step-done .ch-step-label { color: #1a1510; font-weight: 500; }
 
@@ -783,12 +811,12 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-bloque-titulo { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #1a1510; margin: 0; }
 
         .ch-envio-info { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #ede8e0; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; font-weight: 600; color: #55504a; width: fit-content; }
-        .ch-envio-info svg { color: #e23e45; }
+        .ch-envio-info svg { color: #F0623E; }
 
         .ch-item-wrap { position: relative; overflow: hidden; border-radius: 10px; }
         .ch-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #faf7f2; transition: transform 0.2s; position: relative; z-index: 1; border-bottom: 1px solid #ede8e0; touch-action: pan-y; cursor: grab; }
         .ch-item-revelado { transform: translateX(-64px); }
-        .ch-item-trash { position: absolute; top: 0; right: 0; bottom: 0; width: 64px; background: #e23e45; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .ch-item-trash { position: absolute; top: 0; right: 0; bottom: 0; width: 64px; background: #F0623E; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .ch-item-img { width: 46px; height: 46px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f0ebe3; }
         .ch-item-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .ch-item-img-ph { width: 100%; height: 100%; background: #f0ebe3; }
@@ -796,7 +824,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-item-nombre { font-size: 14px; font-weight: 600; display: block; color: #1a1510; }
         .ch-item-precio-unit { font-size: 12px; color: #9a8f82; display: block; margin-top: 2px; }
         .ch-item-ctrl { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .ch-ctrl { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #e23e45; background: transparent; color: #e23e45; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .ch-ctrl { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #F0623E; background: transparent; color: #F0623E; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .ch-ctrl-cant { font-size: 14px; font-weight: 700; min-width: 16px; text-align: center; color: #1a1510; }
 
         .ch-resumen { background: #fff; border: 1px solid #ede8e0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -804,10 +832,10 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-resumen-total { font-size: 18px; font-weight: 700; color: #1a1510; padding-top: 8px; border-top: 1px solid #ede8e0; margin-top: 4px; }
 
         .ch-pago-efectivo { background: #fff; border: 2px solid #ede8e0; border-radius: 12px; overflow: hidden; }
-        .ch-pago-efectivo.activo { border-color: #e23e45; }
+        .ch-pago-efectivo.activo { border-color: #F0623E; }
         .ch-pago-efectivo-cabecera { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: transparent; border: none; cursor: pointer; text-align: left; font-family: inherit; }
         .ch-pago-icono { color: #55504a; flex-shrink: 0; }
-        .ch-pago-efectivo.activo .ch-pago-icono { color: #e23e45; }
+        .ch-pago-efectivo.activo .ch-pago-icono { color: #F0623E; }
         .ch-pago-textos { flex: 1; display: flex; flex-direction: column; gap: 1px; }
         .ch-pago-textos strong { font-size: 14.5px; color: #1a1510; }
         .ch-pago-textos span { font-size: 12px; color: #9a8f82; }
@@ -817,17 +845,17 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-pago-pregunta { font-size: 14px; font-weight: 600; color: #1a1510; margin: 0; }
         .ch-pago-recordatorio { font-size: 12.5px; color: #9a8f82; margin: 0 0 4px; }
         .ch-monto-input { background: #f7f5f2; border: 1.5px solid #ddd8d0; border-radius: 10px; padding: 11px 12px; font-size: 15px; color: #1a1510; font-family: inherit; outline: none; }
-        .ch-monto-input:focus { border-color: #e23e45; }
+        .ch-monto-input:focus { border-color: #F0623E; }
         .ch-btn-guardar-monto { background: #1a1510; color: #faf7f2; border: none; border-radius: 10px; padding: 12px; font-size: 13.5px; font-weight: 700; letter-spacing: 0.02em; font-family: inherit; cursor: pointer; }
 
         .ch-pago-otros { display: flex; flex-direction: column; gap: 8px; }
         .ch-pago-otro { display: flex; align-items: center; gap: 12px; background: #fff; border: 2px solid #ede8e0; border-radius: 12px; padding: 13px 16px; cursor: pointer; font-family: inherit; text-align: left; }
-        .ch-pago-otro.activo { border-color: #e23e45; background: #fff8f5; }
+        .ch-pago-otro.activo { border-color: #F0623E; background: #fff8f5; }
         .ch-pago-otro strong { flex: 1; font-size: 14px; color: #1a1510; font-weight: 600; }
-        .ch-pago-check { color: #e23e45; flex-shrink: 0; }
+        .ch-pago-check { color: #F0623E; flex-shrink: 0; }
         .ch-pago-seguridad { font-size: 12px; color: #9a8f82; line-height: 1.6; background: #f3efe9; border-radius: 10px; padding: 12px 14px; margin: 0; }
 
-        .ch-confirmar-guardada { background: #fff; border: 2px solid #e23e45; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .ch-confirmar-guardada { background: #fff; border: 2px solid #F0623E; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
         .ch-confirmar-titulo { font-size: 14px; font-weight: 700; color: #1a1510; margin: 0; }
         .ch-confirmar-direccion { font-size: 13.5px; color: #55504a; margin: 0; }
         .ch-confirmar-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
@@ -837,12 +865,12 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-resumen-campo { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff; border: 1px solid #ede8e0; border-radius: 10px; padding: 12px 14px; }
         .ch-resumen-campo-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9a8f82; display: block; margin-bottom: 2px; }
         .ch-resumen-campo-val { font-size: 14px; color: #1a1510; font-weight: 500; }
-        .ch-btn-cambiar-chico { background: transparent; border: none; color: #e23e45; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+        .ch-btn-cambiar-chico { background: transparent; border: none; color: #F0623E; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; flex-shrink: 0; }
         .ch-productos-resumen { display: flex; flex-direction: column; gap: 6px; }
 
         .ch-opciones-entrega { display: flex; gap: 8px; }
         .ch-opcion-entrega { flex: 1; display: flex; flex-direction: column; gap: 2px; background: #fff; border: 2px solid #ede8e0; border-radius: 10px; padding: 14px 12px; cursor: pointer; font-family: inherit; text-align: left; }
-        .ch-opcion-entrega.activa { border-color: #e23e45; background: #fff8f5; }
+        .ch-opcion-entrega.activa { border-color: #F0623E; background: #fff8f5; }
         .ch-opcion-titulo { font-size: 13.5px; font-weight: 700; color: #1a1510; }
         .ch-opcion-sub { font-size: 11.5px; color: #9a8f82; }
 
@@ -858,22 +886,22 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         @keyframes spin { to { transform: rotate(360deg); } }
         .ch-btn-mapa, .ch-btn-manual { background: #fff; border: 1.5px solid #e4ddd3; color: #1a1510; border-radius: 10px; padding: 12px; font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer; width: 100%; }
         .ch-error-ubic { background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .ch-error-titulo { font-size: 12.5px; font-weight: 600; color: #e23e45; margin: 0; }
+        .ch-error-titulo { font-size: 12.5px; font-weight: 600; color: #F0623E; margin: 0; }
         .ch-error-btns { display: flex; flex-direction: column; gap: 6px; }
 
         .ch-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6b6259; font-weight: 500; }
         .ch-campo input, .ch-campo textarea { background: #fff; border: 1.5px solid #ddd8d0; border-radius: 10px; padding: 12px; font-size: 15px; color: #1a1510; font-family: inherit; outline: none; transition: border-color 0.15s; resize: none; }
-        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #e23e45; }
+        .ch-campo input:focus, .ch-campo textarea:focus { border-color: #F0623E; }
         .ch-hint-persistente { font-size: 11px; color: #b0a898; }
-        .req-marca { color: #e23e45; font-weight: 800; }
+        .req-marca { color: #F0623E; font-weight: 800; }
         .opt-marca { color: #9a8f82; font-weight: 400; font-size: 12px; }
 
         .ch-horario-opciones { display: flex; gap: 6px; flex-wrap: wrap; }
         .ch-horario-btn { flex: 1; min-width: 90px; background: #fff; border: 1.5px solid #e4ddd3; color: #55504a; border-radius: 10px; padding: 12px 8px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
-        .ch-horario-btn.activo { border-color: #e23e45; background: #fff5f3; color: #e23e45; }
+        .ch-horario-btn.activo { border-color: #F0623E; background: #FDEEE7; color: #F0623E; }
         .ch-hora-input { width: 100%; background: #fff; border: 1.5px solid #e4ddd3; border-radius: 10px; padding: 11px 12px; font-size: 15px; color: #22201c; font-family: inherit; outline: none; }
-        .ch-hora-invalida { border-color: #e23e45; background: #fff5f3; }
-        .ch-hora-error { font-size: 12px; color: #e23e45; margin: 0; font-weight: 600; }
+        .ch-hora-invalida { border-color: #F0623E; background: #FDEEE7; }
+        .ch-hora-error { font-size: 12px; color: #F0623E; margin: 0; font-weight: 600; }
         .ch-horario-hint { font-size: 11.5px; color: #9a8f82; margin: 0; line-height: 1.4; }
 
         .ch-explicacion-envio { font-size: 12.5px; color: #6b6259; line-height: 1.6; background: #f3efe9; border-radius: 10px; padding: 12px 14px; margin: 0; }
@@ -887,14 +915,14 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-btn-loading { display: flex; align-items: center; justify-content: center; gap: 10px; }
         .ch-spinner-blanco { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: chspin 0.7s linear infinite; display: inline-block; }
         @keyframes chspin { to { transform: rotate(360deg); } }
-        .ch-err-guardado { text-align: center; margin-top: 8px; font-size: 12px; color: #e23e45; }
+        .ch-err-guardado { text-align: center; margin-top: 8px; font-size: 12px; color: #F0623E; }
 
         .ch-aviso-restaurado { flex-shrink: 0; margin: 12px 20px 0; display: flex; align-items: center; gap: 8px; background: #f3efe9; border: 1px solid #e4ddd3; border-radius: 12px; padding: 10px 14px; color: #6b6259; font-size: 12.5px; }
         .ch-aviso-restaurado svg { flex-shrink: 0; color: #9a8f82; }
         .ch-aviso-restaurado span { flex: 1; }
         .ch-aviso-restaurado button { background: none; border: none; color: #9a8f82; cursor: pointer; font-size: 13px; padding: 2px; }
 
-        .ch-aviso-cerrado { flex-shrink: 0; margin: 12px 20px 0; display: flex; gap: 10px; background: #fff5f3; border: 1px solid #fcd0c8; border-radius: 12px; padding: 12px 14px; color: #e23e45; }
+        .ch-aviso-cerrado { flex-shrink: 0; margin: 12px 20px 0; display: flex; gap: 10px; background: #FDEEE7; border: 1px solid #F5C3AB; border-radius: 12px; padding: 12px 14px; color: #F0623E; }
         .ch-aviso-cerrado svg { flex-shrink: 0; margin-top: 1px; }
         .ch-aviso-cerrado div { display: flex; flex-direction: column; gap: 2px; }
         .ch-aviso-cerrado strong { font-size: 13px; }
@@ -905,6 +933,29 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-btn-avisar { width: 100%; background: #1a1510; color: #faf7f2; border: none; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; }
         .ch-avisando { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(45,122,58,0.08); border: 1px solid rgba(45,122,58,0.25); color: #2d7a3a; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
         .ch-btn-cancelar-aviso { background: transparent; border: none; color: #9a8f82; font-size: 12px; text-decoration: underline; cursor: pointer; font-family: inherit; padding: 4px; }
+
+        /* ── CONFIRMACIÓN DE PEDIDO ── */
+        .ch-confirmacion { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 44px 28px calc(28px + env(safe-area-inset-bottom)); gap: 6px; }
+        .ch-close-confirmacion { position: absolute; top: 16px; right: 16px; }
+        .ch-confirmacion-check {
+          width: 62px; height: 62px; border-radius: 50%; background: #F0623E; color: #fff;
+          display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+          box-shadow: 0 6px 18px rgba(240,98,62,0.35);
+          animation: confirmacion-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes confirmacion-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+        .ch-confirmacion-titulo { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #1a1510; margin: 0; }
+        .ch-confirmacion-texto { font-size: 13.5px; color: #6b6259; line-height: 1.55; margin: 8px 0 4px; max-width: 320px; }
+        .ch-confirmacion-texto strong { color: #1a1510; }
+        .ch-confirmacion-reintentar {
+          display: flex; align-items: center; gap: 7px; background: none; border: none;
+          color: #25d366; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+          padding: 8px; margin-top: 6px;
+        }
+        .ch-confirmacion-listo { margin-top: 18px; }
+        @media (prefers-reduced-motion: reduce) {
+          .ch-confirmacion-check { animation: none; }
+        }
       `}</style>
     </>
   );
