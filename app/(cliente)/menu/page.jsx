@@ -129,8 +129,60 @@ export default function MenuPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
   const heroRef       = useRef(null);
-
   const navRef      = useRef(null);
+  const dialogoRefs = {
+    lightboxGaleria: useRef(null),
+    lightboxFoto: useRef(null),
+    modalHorarios: useRef(null),
+    modalReapertura: useRef(null),
+  };
+  const focoPrevioRef = useRef(null);
+
+  // Accesibilidad de modales/lightboxes: Escape para cerrar (el que esté abierto),
+  // foco inicial dentro del diálogo al abrir, y foco de vuelta a quien lo abrió al cerrar.
+  useEffect(() => {
+    const hayModalAbierto = fotoAmpliada || lightboxIdx !== null || modalHorarios || modalReapertura;
+
+    if (hayModalAbierto) {
+      focoPrevioRef.current = document.activeElement;
+      const ref = fotoAmpliada ? dialogoRefs.lightboxFoto
+        : lightboxIdx !== null ? dialogoRefs.lightboxGaleria
+        : modalHorarios ? dialogoRefs.modalHorarios
+        : dialogoRefs.modalReapertura;
+      const primero = ref.current?.querySelector('button, a[href], input, [tabindex]:not([tabindex="-1"])');
+      primero?.focus();
+    } else if (focoPrevioRef.current) {
+      focoPrevioRef.current.focus();
+      focoPrevioRef.current = null;
+    }
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        if (fotoAmpliada) setFotoAmpliada(null);
+        else if (lightboxIdx !== null) setLightboxIdx(null);
+        else if (modalHorarios) setModalHorarios(false);
+        else if (modalReapertura) setModalReapertura(false);
+      }
+    }
+    if (hayModalAbierto) {
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }
+  }, [fotoAmpliada, lightboxIdx, modalHorarios, modalReapertura]);
+
+  // Mantiene el foco dentro del diálogo abierto mientras se navega con Tab.
+  function atraparFoco(e, ref) {
+    if (e.key !== 'Tab' || !ref.current) return;
+    const focables = ref.current.querySelectorAll('button, a[href], input, [tabindex]:not([tabindex="-1"])');
+    if (!focables.length) return;
+    const primero = focables[0];
+    const ultimo = focables[focables.length - 1];
+    if (e.shiftKey && document.activeElement === primero) {
+      e.preventDefault(); ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault(); primero.focus();
+    }
+  }
 
   useEffect(() => { cargar(); }, []);
 
@@ -246,7 +298,7 @@ export default function MenuPage() {
   const busqLower = busqueda.toLowerCase().trim();
   const enBusqueda = busqLower.length > 0;
   const productosFiltrados = enBusqueda
-    ? productos.filter(p => p.nombre.toLowerCase().includes(busqLower) || (p.descripcion || '').toLowerCase().includes(busqLower))
+    ? ordenarDisponibilidad(productos.filter(p => p.nombre.toLowerCase().includes(busqLower) || (p.descripcion || '').toLowerCase().includes(busqLower)))
     : null;
   const promosFiltradas = enBusqueda
     ? promociones.filter(p => p.nombre.toLowerCase().includes(busqLower))
@@ -269,6 +321,16 @@ export default function MenuPage() {
     }
   }
 
+  // Agotados siempre al final; entre disponibles, los nuevos primero.
+  function ordenarDisponibilidad(lista) {
+    return [...lista].sort((a, b) => {
+      const aAgotado = a.disponible === false ? 1 : 0;
+      const bAgotado = b.disponible === false ? 1 : 0;
+      if (aAgotado !== bAgotado) return aAgotado - bAgotado;
+      return (b.es_nuevo ? 1 : 0) - (a.es_nuevo ? 1 : 0);
+    });
+  }
+
   // ── Tarjeta de producto ────────────────────────────────────────────────────
   function TarjetaProducto({ prod }) {
     const tieneVariantes = prod.variantes.length > 0;
@@ -278,17 +340,24 @@ export default function MenuPage() {
 
     return (
       <div className={`card ${!disponible ? 'card-agotado' : ''}`}>
-        <div
-          className={`card-img-wrap ${prod.imagen_url ? 'card-img-clicable' : ''}`}
-          onClick={() => prod.imagen_url && setFotoAmpliada({ url: prod.imagen_url, alt: prod.nombre })}
-        >
-          {prod.imagen_url
-            ? <img className="card-img" src={prod.imagen_url} alt={prod.nombre} />
-            : <div className="card-img-ph"><span>Sin foto</span></div>
-          }
-          {!disponible && <span className="card-badge-agotado">Sin stock</span>}
-          {disponible && prod.es_nuevo && <span className="card-badge-nuevo">Nuevo</span>}
-        </div>
+        {prod.imagen_url ? (
+          <button
+            type="button"
+            className="card-img-wrap card-img-clicable"
+            aria-label={`Ver foto de ${prod.nombre} en grande`}
+            onClick={() => setFotoAmpliada({ url: prod.imagen_url, alt: prod.nombre })}
+          >
+            <img className="card-img" src={prod.imagen_url} alt="" />
+            {!disponible && <span className="card-badge-agotado">Sin stock</span>}
+            {disponible && prod.es_nuevo && <span className="card-badge-nuevo">Nuevo</span>}
+          </button>
+        ) : (
+          <div className="card-img-wrap">
+            <div className="card-img-ph"><span>Sin foto</span></div>
+            {!disponible && <span className="card-badge-agotado">Sin stock</span>}
+            {disponible && prod.es_nuevo && <span className="card-badge-nuevo">Nuevo</span>}
+          </div>
+        )}
 
         <div className="card-body">
           <h3 className="card-nombre">{prod.nombre}</h3>
@@ -364,16 +433,22 @@ export default function MenuPage() {
 
     return (
       <div className="card card-promo">
-        <div
-          className={`card-img-wrap ${promo.imagen_url ? 'card-img-clicable' : ''}`}
-          onClick={() => promo.imagen_url && setFotoAmpliada({ url: promo.imagen_url, alt: promo.nombre })}
-        >
-          {promo.imagen_url
-            ? <img className="card-img" src={promo.imagen_url} alt={promo.nombre} />
-            : <div className="card-img-ph card-img-ph-promo"><span>Promo</span></div>
-          }
-          <span className="card-badge-promo">Promo</span>
-        </div>
+        {promo.imagen_url ? (
+          <button
+            type="button"
+            className="card-img-wrap card-img-clicable"
+            aria-label={`Ver foto de ${promo.nombre} en grande`}
+            onClick={() => setFotoAmpliada({ url: promo.imagen_url, alt: promo.nombre })}
+          >
+            <img className="card-img" src={promo.imagen_url} alt="" />
+            <span className="card-badge-promo">Promo</span>
+          </button>
+        ) : (
+          <div className="card-img-wrap">
+            <div className="card-img-ph card-img-ph-promo"><span>Promo</span></div>
+            <span className="card-badge-promo">Promo</span>
+          </div>
+        )}
         <div className="card-body">
           <h3 className="card-nombre">{promo.nombre}</h3>
           <p className={`card-desc ${expandido ? 'card-desc-expandida' : ''}`}>
@@ -475,9 +550,10 @@ export default function MenuPage() {
 
           <div className="busq-wrap">
             <div className="busq-inner">
-              <svg className="busq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input className="busq-input" type="search" placeholder="Buscar en el menú…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-              {busqueda && <button className="busq-clear" onClick={() => setBusqueda('')}>✕</button>}
+              <label htmlFor="busqueda-input" className="sr-only">Buscar en el menú</label>
+              <svg className="busq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="busqueda-input" className="busq-input" type="search" placeholder="Buscar en el menú…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+              {busqueda && <button className="busq-clear" onClick={() => setBusqueda('')} aria-label="Borrar búsqueda">✕</button>}
             </div>
           </div>
         </header>
@@ -560,7 +636,7 @@ export default function MenuPage() {
               <section className="seccion">
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-nuevo" />Nuevo</h2>
                 <div className="grilla grilla-lista">
-                  {productos.filter(p => p.es_nuevo).map(p => <TarjetaProducto key={p.id} prod={p} />)}
+                  {ordenarDisponibilidad(productos.filter(p => p.es_nuevo)).map(p => <TarjetaProducto key={p.id} prod={p} />)}
                 </div>
               </section>
             )}
@@ -595,9 +671,7 @@ export default function MenuPage() {
             {categorias
               .filter(cat => categoriaActiva === '__todo__' || categoriaActiva === cat.id)
               .map(cat => {
-                const prods = productos
-                  .filter(p => p.categoria_id === cat.id)
-                  .sort((a, b) => (b.es_nuevo ? 1 : 0) - (a.es_nuevo ? 1 : 0));
+                const prods = ordenarDisponibilidad(productos.filter(p => p.categoria_id === cat.id));
                 if (!prods.length) return null;
                 return (
                   <section key={cat.id} className="seccion">
@@ -692,10 +766,18 @@ export default function MenuPage() {
       {/* ── LIGHTBOX DE GALERÍA ── */}
       {lightboxIdx !== null && (
         <div className="lightbox-backdrop" onClick={() => setLightboxIdx(null)}>
-          <button className="lightbox-close" onClick={() => setLightboxIdx(null)}>✕</button>
+          <div
+            ref={dialogoRefs.lightboxGaleria}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Foto ampliada"
+            onKeyDown={e => atraparFoco(e, dialogoRefs.lightboxGaleria)}
+            style={{ display: 'contents' }}
+          >
+          <button className="lightbox-close" aria-label="Cerrar" onClick={() => setLightboxIdx(null)}>✕</button>
 
           {lightboxIdx > 0 && (
-            <button className="lightbox-nav lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i - 1); }}>
+            <button className="lightbox-nav lightbox-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i - 1); }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
           )}
@@ -708,19 +790,29 @@ export default function MenuPage() {
           </div>
 
           {lightboxIdx < galeria.length - 1 && (
-            <button className="lightbox-nav lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i + 1); }}>
+            <button className="lightbox-nav lightbox-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i + 1); }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           )}
+          </div>
         </div>
       )}
 
       {/* ── LIGHTBOX DE FOTO DE PRODUCTO/PROMO ── */}
       {fotoAmpliada && (
         <div className="lightbox-backdrop" onClick={() => setFotoAmpliada(null)}>
-          <button className="lightbox-close" onClick={() => setFotoAmpliada(null)}>✕</button>
-          <div className="lightbox-contenido" onClick={e => e.stopPropagation()}>
-            <img src={fotoAmpliada.url} alt={fotoAmpliada.alt || ''} />
+          <div
+            ref={dialogoRefs.lightboxFoto}
+            role="dialog"
+            aria-modal="true"
+            aria-label={fotoAmpliada.alt || 'Foto ampliada'}
+            onKeyDown={e => atraparFoco(e, dialogoRefs.lightboxFoto)}
+            style={{ display: 'contents' }}
+          >
+            <button className="lightbox-close" aria-label="Cerrar" onClick={() => setFotoAmpliada(null)}>✕</button>
+            <div className="lightbox-contenido" onClick={e => e.stopPropagation()}>
+              <img src={fotoAmpliada.url} alt={fotoAmpliada.alt || ''} />
+            </div>
           </div>
         </div>
       )}
@@ -728,10 +820,18 @@ export default function MenuPage() {
       {/* ── MODAL DE HORARIOS ── */}
       {modalHorarios && (
         <div className="modal-horarios-backdrop" onClick={() => setModalHorarios(false)}>
-          <div className="modal-horarios" onClick={e => e.stopPropagation()}>
+          <div
+            className="modal-horarios"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-horarios-titulo"
+            ref={dialogoRefs.modalHorarios}
+            onKeyDown={e => atraparFoco(e, dialogoRefs.modalHorarios)}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="modal-horarios-header">
-              <h2>Horarios de atención</h2>
-              <button className="modal-horarios-close" onClick={() => setModalHorarios(false)}>✕</button>
+              <h2 id="modal-horarios-titulo">Horarios de atención</h2>
+              <button className="modal-horarios-close" aria-label="Cerrar" onClick={() => setModalHorarios(false)}>✕</button>
             </div>
 
             <div className="modal-horarios-lista">
@@ -781,11 +881,19 @@ export default function MenuPage() {
       {/* ── MODAL DE REAPERTURA ── */}
       {modalReapertura && (
         <div className="modal-reap-backdrop" onClick={() => setModalReapertura(false)}>
-          <div className="modal-reap" onClick={e => e.stopPropagation()}>
+          <div
+            className="modal-reap"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-reap-titulo"
+            ref={dialogoRefs.modalReapertura}
+            onKeyDown={e => atraparFoco(e, dialogoRefs.modalReapertura)}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="modal-reap-icono">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h2>¡Ya estamos abiertos!</h2>
+            <h2 id="modal-reap-titulo">¡Ya estamos abiertos!</h2>
             <p>Tenés un pedido armado esperando. ¿Lo confirmamos ahora?</p>
             <button className="modal-reap-btn-si" onClick={() => { cancelarAvisoApertura(); setModalReapertura(false); setShowCheckout(true); }}>
               Revisar y confirmar pedido
@@ -1008,7 +1116,11 @@ export default function MenuPage() {
         .card-promo { border-color: rgba(61,74,47,0.25); }
 
         .card-img-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #f3efe6; }
+        button.card-img-wrap { display: block; padding: 0; margin: 0; border: none; font: inherit; text-align: inherit; }
         .card-img-clicable { cursor: zoom-in; }
+        .card-img-clicable:focus-visible { outline: 3px solid #F0623E; outline-offset: -3px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
         .card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .card-img-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c4bcae; font-size: 12px; }
         .card-img-ph-promo { background: linear-gradient(135deg, #f3efe6, #eae3d4); }
