@@ -135,26 +135,30 @@ export default function MenuPage() {
     lightboxFoto: useRef(null),
     modalHorarios: useRef(null),
     modalReapertura: useRef(null),
+    resumenCarrito: useRef(null),
   };
   const focoPrevioRef = useRef(null);
   const cantidadPrevRef = useRef(0);
   const [reboteCarrito, setReboteCarrito] = useState(0);
+  const [mostrarResumen, setMostrarResumen] = useState(false);
   useEffect(() => {
     if (cantidad > cantidadPrevRef.current) setReboteCarrito(r => r + 1);
     cantidadPrevRef.current = cantidad;
+    if (cantidad === 0) setMostrarResumen(false);
   }, [cantidad]);
 
   // Accesibilidad de modales/lightboxes: Escape para cerrar (el que esté abierto),
   // foco inicial dentro del diálogo al abrir, y foco de vuelta a quien lo abrió al cerrar.
   useEffect(() => {
-    const hayModalAbierto = fotoAmpliada || lightboxIdx !== null || modalHorarios || modalReapertura;
+    const hayModalAbierto = fotoAmpliada || lightboxIdx !== null || modalHorarios || modalReapertura || mostrarResumen;
 
     if (hayModalAbierto) {
       focoPrevioRef.current = document.activeElement;
       const ref = fotoAmpliada ? dialogoRefs.lightboxFoto
         : lightboxIdx !== null ? dialogoRefs.lightboxGaleria
         : modalHorarios ? dialogoRefs.modalHorarios
-        : dialogoRefs.modalReapertura;
+        : modalReapertura ? dialogoRefs.modalReapertura
+        : dialogoRefs.resumenCarrito;
       const primero = ref.current?.querySelector('button, a[href], input, [tabindex]:not([tabindex="-1"])');
       primero?.focus();
     } else if (focoPrevioRef.current) {
@@ -168,13 +172,14 @@ export default function MenuPage() {
         else if (lightboxIdx !== null) setLightboxIdx(null);
         else if (modalHorarios) setModalHorarios(false);
         else if (modalReapertura) setModalReapertura(false);
+        else if (mostrarResumen) setMostrarResumen(false);
       }
     }
     if (hayModalAbierto) {
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
     }
-  }, [fotoAmpliada, lightboxIdx, modalHorarios, modalReapertura]);
+  }, [fotoAmpliada, lightboxIdx, modalHorarios, modalReapertura, mostrarResumen]);
 
   // Mantiene el foco dentro del diálogo abierto mientras se navega con Tab.
   function atraparFoco(e, ref) {
@@ -937,19 +942,71 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ── BARRA DE CARRITO — grande, fija abajo, bien visible ── */}
+      {/* ── CARRITO FLOTANTE — barra + mini-resumen desplegable ── */}
       {cantidad > 0 && !showCheckout && (
-        <button className="barra-carrito" onClick={() => setShowCheckout(true)}>
-          <span className="barra-carrito-icono" key={reboteCarrito}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            <span className="barra-carrito-badge">{cantidad}</span>
-          </span>
-          <span className="barra-carrito-texto">
-            <strong>Realizar pedido</strong>
-            <span>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</span>
-          </span>
-          <span className="barra-carrito-precio">${subtotal.toLocaleString('es-AR')}</span>
-        </button>
+        <div className="carrito-flotante-wrap">
+          <div className="barra-carrito">
+            <button className="barra-carrito-principal" onClick={() => setShowCheckout(true)}>
+              <span className="barra-carrito-icono" key={reboteCarrito}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span className="barra-carrito-badge">{cantidad}</span>
+              </span>
+              <span className="barra-carrito-texto">
+                <strong>Realizar pedido</strong>
+                <span>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</span>
+              </span>
+              <span className="barra-carrito-precio">${subtotal.toLocaleString('es-AR')}</span>
+            </button>
+            <button
+              className="barra-carrito-toggle"
+              aria-expanded={mostrarResumen}
+              aria-label={mostrarResumen ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido'}
+              onClick={() => setMostrarResumen(v => !v)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: mostrarResumen ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }}><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+
+          {mostrarResumen && (
+            <div
+              className="resumen-carrito"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="resumen-carrito-titulo"
+              ref={dialogoRefs.resumenCarrito}
+              onKeyDown={e => atraparFoco(e, dialogoRefs.resumenCarrito)}
+            >
+              <div className="resumen-carrito-header">
+                <h2 id="resumen-carrito-titulo">Tu pedido</h2>
+                <button className="resumen-carrito-close" aria-label="Cerrar resumen" onClick={() => setMostrarResumen(false)}>✕</button>
+              </div>
+
+              <div className="resumen-carrito-lista">
+                {items.map(it => (
+                  <div key={`${it.tipo}_${it.id}_${it.variante_id || 'x'}`} className="resumen-fila">
+                    <div className="resumen-fila-info">
+                      <span className="resumen-fila-nombre">{it.nombre_snapshot}</span>
+                      <span className="resumen-fila-preciounit">${it.precio.toLocaleString('es-AR')} c/u</span>
+                    </div>
+                    <div className="ctrl">
+                      <button className="ctrl-btn" aria-label={`Quitar una unidad de ${it.nombre_snapshot}`} onClick={() => quitar({ tipo: it.tipo, id: it.id, variante_id: it.variante_id })}>−</button>
+                      <span className="ctrl-n">{it.cantidad}</span>
+                      <button className="ctrl-btn" aria-label={`Agregar una unidad más de ${it.nombre_snapshot}`} onClick={() => manejarAgregar(it)}>+</button>
+                    </div>
+                    <span className="resumen-fila-total">${(it.precio * it.cantidad).toLocaleString('es-AR')}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="resumen-carrito-footer">
+                <span className="resumen-carrito-subtotal">Subtotal <strong>${subtotal.toLocaleString('es-AR')}</strong></span>
+                <button className="resumen-carrito-btn" onClick={() => { setMostrarResumen(false); setShowCheckout(true); }}>
+                  Confirmar pedido
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── BOTONES FLOTANTES DE REDES SOCIALES ── */}
@@ -1046,17 +1103,33 @@ export default function MenuPage() {
         .btn-consulta { display: flex; align-items: center; gap: 6px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter 0.15s; }
         .btn-consulta:hover { filter: brightness(1.08); }
 
-        /* ── BARRA DE CARRITO GRANDE ── */
-        .barra-carrito {
+        /* ── CARRITO FLOTANTE — wrapper fijo que apila barra + resumen ── */
+        .carrito-flotante-wrap {
           position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 45;
-          background: #22201c; color: #fffbf5; border: none; border-radius: 18px;
-          padding: 14px 16px; display: flex; align-items: center; gap: 12px;
-          cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+          display: flex; flex-direction: column-reverse; gap: 8px;
+          max-width: 520px; margin: 0 auto; max-height: calc(100vh - 24px);
+        }
+
+        .barra-carrito {
+          flex-shrink: 0;
+          background: #22201c; color: #fffbf5; border-radius: 18px;
+          display: flex; align-items: stretch;
+          box-shadow: 0 8px 28px rgba(0,0,0,0.28);
           animation: barraEntrar 0.35s cubic-bezier(0.32,0.72,0,1);
-          max-width: 520px; margin: 0 auto;
         }
         @keyframes barraEntrar { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .barra-carrito:active { transform: scale(0.98); }
+        .barra-carrito-principal {
+          flex: 1; min-width: 0; background: none; border: none; color: inherit; font: inherit;
+          padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+          border-radius: 18px 0 0 18px;
+        }
+        .barra-carrito-principal:active { transform: scale(0.98); }
+        .barra-carrito-toggle {
+          flex-shrink: 0; width: 42px; display: flex; align-items: center; justify-content: center;
+          background: none; border: none; border-left: 1px solid rgba(255,255,255,0.14); color: inherit;
+          cursor: pointer; border-radius: 0 18px 18px 0;
+        }
+        .barra-carrito-toggle:active { background: rgba(255,255,255,0.08); }
         .barra-carrito-icono { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #F0623E; width: 46px; height: 46px; border-radius: 50%; animation: iconoRebote 0.45s cubic-bezier(0.34,1.56,0.64,1); }
         @keyframes iconoRebote { 0% { transform: scale(1); } 40% { transform: scale(1.22) rotate(-8deg); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
         .barra-carrito-badge { position: absolute; top: -4px; right: -4px; background: #fffbf5; color: #22201c; font-size: 12px; font-weight: 800; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid #22201c; }
@@ -1064,6 +1137,30 @@ export default function MenuPage() {
         .barra-carrito-texto strong { font-size: 16px; font-weight: 800; }
         .barra-carrito-texto span { font-size: 12.5px; color: #c9c2b6; }
         .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; }
+
+        /* ── MINI-RESUMEN DEL PEDIDO ── */
+        .resumen-carrito {
+          flex-shrink: 1; min-height: 0; display: flex; flex-direction: column;
+          background: #fffbf5; border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+          overflow: hidden; animation: resumenEntrar 0.22s ease;
+        }
+        @keyframes resumenEntrar { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .resumen-carrito-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; flex-shrink: 0; }
+        .resumen-carrito-header h2 { font-size: 15px; font-weight: 800; color: #22201c; margin: 0; }
+        .resumen-carrito-close { background: #f3efe6; border: none; width: 26px; height: 26px; border-radius: 50%; color: #8a8378; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .resumen-carrito-lista { overflow-y: auto; min-height: 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+        .resumen-fila { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #f0ece3; }
+        .resumen-fila:last-child { border-bottom: none; padding-bottom: 4px; }
+        .resumen-fila-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .resumen-fila-nombre { font-size: 13px; font-weight: 700; color: #22201c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .resumen-fila-preciounit { font-size: 11.5px; color: #8a8378; }
+        .resumen-fila-total { font-size: 13px; font-weight: 800; color: #22201c; flex-shrink: 0; min-width: 52px; text-align: right; }
+        .resumen-carrito-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 16px; }
+        .resumen-carrito-subtotal { font-size: 13px; color: #8a8378; }
+        .resumen-carrito-subtotal strong { font-size: 16px; color: #22201c; margin-left: 4px; }
+        .resumen-carrito-btn { background: #F0623E; color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; flex-shrink: 0; }
+        .resumen-carrito-btn:hover { background: #D94E2C; }
+
 
         /* ── ESTADO ── */
         .estado-bar { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; padding: 4px 0 8px; }
