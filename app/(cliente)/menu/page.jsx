@@ -137,6 +137,12 @@ export default function MenuPage() {
     modalReapertura: useRef(null),
   };
   const focoPrevioRef = useRef(null);
+  const cantidadPrevRef = useRef(0);
+  const [reboteCarrito, setReboteCarrito] = useState(0);
+  useEffect(() => {
+    if (cantidad > cantidadPrevRef.current) setReboteCarrito(r => r + 1);
+    cantidadPrevRef.current = cantidad;
+  }, [cantidad]);
 
   // Accesibilidad de modales/lightboxes: Escape para cerrar (el que esté abierto),
   // foco inicial dentro del diálogo al abrir, y foco de vuelta a quien lo abrió al cerrar.
@@ -331,7 +337,33 @@ export default function MenuPage() {
     });
   }
 
-  // ── Tarjeta de producto ────────────────────────────────────────────────────
+  // Botón de agregar con feedback visual: al tocarlo, hace un pop de color y muestra
+  // una burbuja "+1" que sube y se desvanece, para que quede claro que el producto entró al carrito.
+  function BotonAgregar({ pequeno, disponible, onAdd, children }) {
+    const [pulso, setPulso] = useState(false);
+    const timeoutRef = useRef(null);
+
+    function click() {
+      onAdd();
+      setPulso(true);
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setPulso(false), 650);
+    }
+    useEffect(() => () => clearTimeout(timeoutRef.current), []);
+
+    return (
+      <button
+        type="button"
+        className={`${pequeno ? 'ctrl-btn ctrl-add' : 'ctrl-btn-agregar'} ${pulso ? 'btn-agregado' : ''}`}
+        disabled={!disponible}
+        onClick={click}
+      >
+        {children}
+        {pulso && <span className="flotante-mas1" aria-hidden="true">+1</span>}
+      </button>
+    );
+  }
+
   function TarjetaProducto({ prod }) {
     const tieneVariantes = prod.variantes.length > 0;
     const disponible = prod.disponible;
@@ -390,11 +422,11 @@ export default function MenuPage() {
                           <span className="ctrl-n">{c}</span>
                         </>
                       )}
-                      <button
-                        className="ctrl-btn ctrl-add"
-                        disabled={!disponible}
-                        onClick={() => manejarAgregar({ tipo: 'producto', id: prod.id, variante_id: v.id, variante_nombre: v.nombre, nombre_snapshot: `${prod.nombre} (${v.nombre})`, precio: v.precio, imagen_url: prod.imagen_url })}
-                      >+</button>
+                      <BotonAgregar
+                        pequeno
+                        disponible={disponible}
+                        onAdd={() => manejarAgregar({ tipo: 'producto', id: prod.id, variante_id: v.id, variante_nombre: v.nombre, nombre_snapshot: `${prod.nombre} (${v.nombre})`, precio: v.precio, imagen_url: prod.imagen_url })}
+                      >+</BotonAgregar>
                     </div>
                   </div>
                 );
@@ -410,13 +442,12 @@ export default function MenuPage() {
                     <span className="ctrl-n">{cantProd(prod.id)}</span>
                   </>
                 )}
-                <button
-                  className="ctrl-btn-agregar"
-                  disabled={!disponible}
-                  onClick={() => manejarAgregar({ tipo: 'producto', id: prod.id, nombre_snapshot: prod.nombre, precio: prod.precio, imagen_url: prod.imagen_url })}
+                <BotonAgregar
+                  disponible={disponible}
+                  onAdd={() => manejarAgregar({ tipo: 'producto', id: prod.id, nombre_snapshot: prod.nombre, precio: prod.precio, imagen_url: prod.imagen_url })}
                 >
                   + Agregar
-                </button>
+                </BotonAgregar>
               </div>
             </div>
           )}
@@ -470,9 +501,12 @@ export default function MenuPage() {
                   <span className="ctrl-n">{c}</span>
                 </>
               )}
-              <button className="ctrl-btn-agregar" onClick={() => manejarAgregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo, imagen_url: promo.imagen_url })}>
+              <BotonAgregar
+                disponible={true}
+                onAdd={() => manejarAgregar({ tipo: 'promo', id: promo.id, nombre_snapshot: promo.nombre, precio: promo.precio_promo, imagen_url: promo.imagen_url })}
+              >
                 + Agregar
-              </button>
+              </BotonAgregar>
             </div>
           </div>
         </div>
@@ -906,7 +940,7 @@ export default function MenuPage() {
       {/* ── BARRA DE CARRITO — grande, fija abajo, bien visible ── */}
       {cantidad > 0 && !showCheckout && (
         <button className="barra-carrito" onClick={() => setShowCheckout(true)}>
-          <span className="barra-carrito-icono">
+          <span className="barra-carrito-icono" key={reboteCarrito}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span className="barra-carrito-badge">{cantidad}</span>
           </span>
@@ -1023,7 +1057,8 @@ export default function MenuPage() {
         }
         @keyframes barraEntrar { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .barra-carrito:active { transform: scale(0.98); }
-        .barra-carrito-icono { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #F0623E; width: 46px; height: 46px; border-radius: 50%; }
+        .barra-carrito-icono { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #F0623E; width: 46px; height: 46px; border-radius: 50%; animation: iconoRebote 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes iconoRebote { 0% { transform: scale(1); } 40% { transform: scale(1.22) rotate(-8deg); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
         .barra-carrito-badge { position: absolute; top: -4px; right: -4px; background: #fffbf5; color: #22201c; font-size: 12px; font-weight: 800; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid #22201c; }
         .barra-carrito-texto { flex: 1; text-align: left; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
         .barra-carrito-texto strong { font-size: 16px; font-weight: 800; }
@@ -1146,13 +1181,27 @@ export default function MenuPage() {
 
         /* ── CONTROLES +/- ── */
         .ctrl { display: flex; align-items: center; gap: 6px; }
-        .ctrl-btn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #F0623E; background: transparent; color: #F0623E; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.1s, color 0.1s; flex-shrink: 0; }
+        .ctrl-btn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #F0623E; background: transparent; color: #F0623E; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.1s, color 0.1s; flex-shrink: 0; position: relative; }
         .ctrl-btn:hover { background: #F0623E; color: #fff; }
         .ctrl-n { font-size: 13px; font-weight: 700; min-width: 14px; text-align: center; }
 
-        .ctrl-btn-agregar { width: 100%; background: #F0623E; color: #fff; border: none; border-radius: 8px; padding: 8px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, box-shadow 0.2s ease; animation: boton-resplandor 2.8s ease-in-out infinite; }
+        .ctrl-btn-agregar { width: 100%; background: #F0623E; color: #fff; border: none; border-radius: 8px; padding: 8px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, box-shadow 0.2s ease; animation: boton-resplandor 2.8s ease-in-out infinite; position: relative; }
         .ctrl-btn-agregar:hover:not(:disabled) { background: #D94E2C; }
         .ctrl-btn-agregar:disabled { opacity: 0.4; cursor: default; }
+
+        /* ── Feedback al agregar al carrito ── */
+        .ctrl-btn-agregar.btn-agregado, .ctrl-btn.ctrl-add.btn-agregado { background: #2f9e57; border-color: #2f9e57; color: #fff; animation: botonPop 0.4s ease; }
+        @keyframes botonPop { 0% { transform: scale(1); } 35% { transform: scale(1.14); } 100% { transform: scale(1); } }
+        .flotante-mas1 {
+          position: absolute; top: -4px; left: 50%; pointer-events: none;
+          font-size: 12px; font-weight: 800; color: #2f9e57;
+          animation: flotarMas1 0.65s ease forwards;
+        }
+        @keyframes flotarMas1 {
+          0%   { opacity: 0; transform: translate(-50%, 2px) scale(0.8); }
+          20%  { opacity: 1; transform: translate(-50%, -2px) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -26px) scale(1); }
+        }
 
         /* ── BÚSQUEDA ── */
         .busq-resultados { padding: 16px 4px 0; }
