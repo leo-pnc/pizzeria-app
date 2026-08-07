@@ -95,6 +95,64 @@ function GaleriaCocina({ fotos, onSelect }) {
   );
 }
 
+// ── Revelado en scroll: cada sección de categoría hace un fade + slide sutil al entrar en pantalla
+// (una sola vez), en vez de aparecer de golpe con el resto de la página ──
+function useEnPantalla({ margen = '0px 0px -80px 0px', umbral = 0.12 } = {}) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || visible) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        obs.unobserve(el);
+      }
+    }, { threshold: umbral, rootMargin: margen });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [margen, umbral, visible]);
+  return [ref, visible];
+}
+
+function Seccion({ className = '', children }) {
+  const [ref, visible] = useEnPantalla();
+  return (
+    <section ref={ref} className={`seccion ${visible ? 'seccion-visible' : ''} ${className}`.trim()}>
+      {children}
+    </section>
+  );
+}
+
+// ── Skeleton con forma de "bollo de masa" (blob orgánico) en vez de rectángulos grises genéricos,
+// para que la carga se sienta parte de la marca en vez de un placeholder cualquiera ──
+function TarjetaSkeleton() {
+  return (
+    <div className="card card-skeleton" aria-hidden="true">
+      <div className="skel-img">
+        <span className="skel-bollo" />
+      </div>
+      <div className="card-body">
+        <span className="skel-linea skel-linea-titulo" />
+        <span className="skel-linea skel-linea-desc" />
+        <span className="skel-linea skel-linea-desc-corta" />
+        <span className="skel-precio" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonMenu() {
+  return (
+    <section className="seccion seccion-visible" aria-hidden="true">
+      <h2 className="seccion-titulo skel-titulo-seccion"><span className="titulo-bar" />&nbsp;</h2>
+      <div className="grilla grilla-lista">
+        {Array.from({ length: 6 }).map((_, i) => <TarjetaSkeleton key={i} />)}
+      </div>
+    </section>
+  );
+}
+
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
 
@@ -120,6 +178,7 @@ export default function MenuPage() {
   const [lightboxIdx, setLightboxIdx]     = useState(null);
   const [fotoAmpliada, setFotoAmpliada]   = useState(null); // { url, alt } de la foto de un producto/promo en grande
   const [splashListo, setSplashListo]     = useState(false);
+  const [cargando, setCargando]           = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -294,6 +353,7 @@ export default function MenuPage() {
     }
     if (mets) setMetodos(mets);
     if (fotos) setGaleria(fotos);
+    setCargando(false);
   }
 
   function scrollFila(e, direccion) {
@@ -571,19 +631,10 @@ export default function MenuPage() {
         <header className="header">
           <div className="header-inner">
             <div className="header-marca">
-              <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
+              <span className="header-logo-wrap">
+                <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
+              </span>
               <h1 className="header-nombre">Don Adriano's</h1>
-            </div>
-
-            <div className="header-acciones">
-              <a
-                className="btn-consulta"
-                href={`https://wa.me/${config?.whatsapp_numero}?text=${encodeURIComponent('Hola, tengo una consulta sobre el menú.')}`}
-                target="_blank" rel="noopener noreferrer"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                <span className="btn-consulta-txt">Consultar</span>
-              </a>
             </div>
           </div>
 
@@ -599,35 +650,16 @@ export default function MenuPage() {
 
       </div>
 
-      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── se colapsa suavemente al elegir una categoría, en vez de desaparecer de golpe ── */}
+      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── se colapsa suavemente al elegir una categoría, en vez de desaparecer de golpe.
+           Compacta a propósito: es un adorno de marca, no debe competir con el menú por espacio. La dirección, "Cómo llegar"
+           y los horarios viven en el pie de página, para no repetir la misma info dos veces en la misma pantalla. ── */}
       {galeria.length > 0 && (
         <div className={`galeria-colapsable ${mostrarGaleria ? '' : 'cerrado'}`}>
           <div className="galeria-colapsable-inner">
             <section className="galeria-seccion">
               <div className="galeria-inner">
-                <h2 className="galeria-titulo">
-                  <span className="titulo-bar" />
-                  <span className="icono-llama">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-1.5 3-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1.5-4 .2 1.5-.7 2.5-1.5 2.5.5-2-.5-4-2-5 .3 1.5-.5 2-1 1.5.5-2 .5-3.5 1-5z"/></svg>
-                  </span>
-                  Nuestra cocina
-                </h2>
+                <h2 className="galeria-titulo galeria-titulo-compacta">Nuestra cocina</h2>
                 <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
-
-                <div className="galeria-ubicacion">
-                  <p className="galeria-direccion">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    San José, Guaymallén
-                  </p>
-                  <div className="galeria-ubicacion-botones">
-                    {config?.latitud_local && (
-                      <a className="galeria-btn-primario" href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                        Cómo llegar
-                      </a>
-                    )}
-                    <button className="galeria-btn-secundario" onClick={() => setModalHorarios(true)}>Ver horarios</button>
-                  </div>
-                </div>
               </div>
             </section>
           </div>
@@ -668,21 +700,23 @@ export default function MenuPage() {
           </div>
         )}
 
-        {!enBusqueda && (
-          <>
+        {!enBusqueda && cargando && <SkeletonMenu />}
+
+        {!enBusqueda && !cargando && (
+          <div key={categoriaActiva} className="cat-contenido-anim">
             {/* Nuevo: productos marcados como recién lanzados */}
             {hayProductosNuevos && categoriaActiva === '__nuevo__' && (
-              <section className="seccion">
+              <Seccion>
                 <h2 className="seccion-titulo"><span className="titulo-bar titulo-bar-nuevo" />Nuevo</h2>
                 <div className="grilla grilla-lista">
                   {ordenarDisponibilidad(productos.filter(p => p.es_nuevo)).map(p => <TarjetaProducto key={p.id} prod={p} />)}
                 </div>
-              </section>
+              </Seccion>
             )}
 
             {/* Promociones: en "Todo" es una fila horizontal, en su propia pestaña es grilla vertical */}
             {promociones.length > 0 && (categoriaActiva === '__todo__' || categoriaActiva === '__promos__') && (
-              <section className="seccion">
+              <Seccion>
                 <h2 className="seccion-titulo">
                   <span className="titulo-bar titulo-bar-verde" />
                   Promociones
@@ -703,7 +737,7 @@ export default function MenuPage() {
                     {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
                   </div>
                 )}
-              </section>
+              </Seccion>
             )}
 
             {/* Categorías: en "Todo" cada una es una fila horizontal; si hay una elegida, grilla vertical con todo */}
@@ -713,7 +747,7 @@ export default function MenuPage() {
                 const prods = ordenarDisponibilidad(productos.filter(p => p.categoria_id === cat.id));
                 if (!prods.length) return null;
                 return (
-                  <section key={cat.id} className="seccion">
+                  <Seccion key={cat.id}>
                     <h2 className="seccion-titulo">
                       <span className="titulo-bar" />
                       {cat.nombre}
@@ -734,7 +768,7 @@ export default function MenuPage() {
                         {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
                       </div>
                     )}
-                  </section>
+                  </Seccion>
                 );
               })}
 
@@ -745,7 +779,7 @@ export default function MenuPage() {
                   <p>No hay productos cargados en esta categoría todavía.</p>
                 </div>
             )}
-          </>
+          </div>
         )}
       </main>
       </div>
@@ -1009,9 +1043,18 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ── BOTONES FLOTANTES DE REDES SOCIALES ── */}
-      {!showCheckout && (config?.instagram_url || config?.facebook_url) && (
+      {/* ── BOTONES FLOTANTES: WhatsApp + redes sociales, discretos en la esquina en vez de competir con la marca arriba ── */}
+      {!showCheckout && (config?.whatsapp_numero || config?.instagram_url || config?.facebook_url) && (
         <div className={`redes-flotantes ${cantidad > 0 ? 'redes-con-carrito' : ''}`}>
+          {config.whatsapp_numero && (
+            <a
+              className="btn-red btn-red-wa"
+              href={`https://wa.me/${config.whatsapp_numero}?text=${encodeURIComponent('Hola, tengo una consulta sobre el menú.')}`}
+              target="_blank" rel="noopener noreferrer" aria-label="Consultar por WhatsApp"
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </a>
+          )}
           {config.instagram_url && (
             <a className="btn-red btn-red-ig" href={config.instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -1051,7 +1094,20 @@ export default function MenuPage() {
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
-        body { background: #fffbf5; color: #22201c; font-family: 'Work Sans', system-ui, sans-serif; }
+        body {
+          background-color: #fffbf5;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          background-repeat: repeat;
+          color: #22201c; font-family: 'Work Sans', system-ui, sans-serif;
+        }
+        /* Selección de texto y scrollbar con la paleta de la marca en vez del gris de sistema */
+        ::selection { background: #F0623E; color: #fffbf5; }
+        ::-moz-selection { background: #F0623E; color: #fffbf5; }
+        html { scrollbar-color: #ddcfb8 #f3efe6; scrollbar-width: thin; }
+        ::-webkit-scrollbar { width: 11px; height: 11px; }
+        ::-webkit-scrollbar-track { background: #f3efe6; }
+        ::-webkit-scrollbar-thumb { background: #ddcfb8; border-radius: 10px; border: 2px solid #f3efe6; }
+        ::-webkit-scrollbar-thumb:hover { background: #c9b896; }
 
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
@@ -1095,13 +1151,15 @@ export default function MenuPage() {
 
         .header { border-bottom: 1px solid rgba(236,230,220,0.7); }
         .header-inner { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .header-marca { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
-        .header-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 50%; border: 2px solid #ece6dc; background: #fffbf5; flex-shrink: 0; }
-        .header-nombre { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #E0562F; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .header-marca { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+        .header-logo-wrap {
+          width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+          background: #fffbf5; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 8px rgba(34,32,28,0.12), 0 0 0 1px rgba(236,230,220,0.9);
+        }
+        .header-logo { width: 34px; height: 34px; object-fit: contain; }
+        .header-nombre { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #E0562F; letter-spacing: -0.01em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-        .btn-consulta { display: flex; align-items: center; gap: 6px; background: #25d366; color: #fff; border: none; border-radius: 20px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter 0.15s; }
-        .btn-consulta:hover { filter: brightness(1.08); }
 
         /* ── CARRITO FLOTANTE — wrapper fijo que apila barra + resumen ── */
         .carrito-flotante-wrap {
@@ -1194,6 +1252,61 @@ export default function MenuPage() {
         /* ── MAIN / GRILLA DE TARJETAS ── */
         .main { max-width: 760px; margin: 0 auto; padding: 0 12px 130px; }
         .seccion { padding-top: 24px; }
+
+        /* ── Scroll-reveal: cada sección entra con un fade + slide sutil, y las tarjetas de adentro
+           se escalonan (stagger) en vez de aparecer todas de golpe ── */
+        .seccion { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1); }
+        .seccion-visible { opacity: 1; transform: translateY(0); }
+        .seccion .grilla > *, .seccion .fila-horizontal > * {
+          opacity: 0; transform: translateY(12px);
+          transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
+          transition-delay: 0ms;
+        }
+        .seccion-visible .grilla > *, .seccion-visible .fila-horizontal > * { opacity: 1; transform: translateY(0); }
+        .seccion-visible .grilla > *:nth-child(1),  .seccion-visible .fila-horizontal > *:nth-child(1)  { transition-delay: 0ms; }
+        .seccion-visible .grilla > *:nth-child(2),  .seccion-visible .fila-horizontal > *:nth-child(2)  { transition-delay: 45ms; }
+        .seccion-visible .grilla > *:nth-child(3),  .seccion-visible .fila-horizontal > *:nth-child(3)  { transition-delay: 90ms; }
+        .seccion-visible .grilla > *:nth-child(4),  .seccion-visible .fila-horizontal > *:nth-child(4)  { transition-delay: 135ms; }
+        .seccion-visible .grilla > *:nth-child(5),  .seccion-visible .fila-horizontal > *:nth-child(5)  { transition-delay: 180ms; }
+        .seccion-visible .grilla > *:nth-child(6),  .seccion-visible .fila-horizontal > *:nth-child(6)  { transition-delay: 225ms; }
+        .seccion-visible .grilla > *:nth-child(n+7) { transition-delay: 260ms; }
+        @media (prefers-reduced-motion: reduce) {
+          .seccion, .seccion .grilla > *, .seccion .fila-horizontal > * { transition: none; opacity: 1; transform: none; }
+        }
+
+        /* ── Transición de categoría: fade + slide en vez de corte seco al tocar una pestaña ── */
+        .cat-contenido-anim { animation: catFadeSlide 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+        @keyframes catFadeSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .cat-contenido-anim { animation: none; } }
+
+        /* ── Skeleton "bollo de masa": misma silueta que la tarjeta real, con forma orgánica de bollo
+           en vez de un rectángulo gris genérico, y un brillo cálido en vez de shimmer gris ── */
+        .card-skeleton { pointer-events: none; }
+        .card-skeleton .skel-img { position: relative; width: 100%; aspect-ratio: 1/1; background: #f6f1e7; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .skel-bollo {
+          width: 66%; height: 66%;
+          border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%;
+          background: linear-gradient(120deg, #ece2d0 25%, #f8f1e5 45%, #ece2d0 65%);
+          background-size: 220% 100%;
+          animation: skel-brillo 1.7s ease-in-out infinite;
+        }
+        .skel-linea {
+          display: block; height: 10px; border-radius: 6px; width: 92%;
+          background: linear-gradient(120deg, #ece2d0 25%, #f8f1e5 45%, #ece2d0 65%);
+          background-size: 220% 100%;
+          animation: skel-brillo 1.7s ease-in-out infinite;
+        }
+        .skel-linea-titulo { width: 78%; height: 12px; }
+        .skel-linea-desc-corta { width: 55%; }
+        .skel-precio {
+          display: block; width: 38%; height: 14px; border-radius: 6px; margin-top: 6px;
+          background: linear-gradient(120deg, #fbe3d8 25%, #fdece3 45%, #fbe3d8 65%);
+          background-size: 220% 100%;
+          animation: skel-brillo 1.7s ease-in-out infinite;
+        }
+        .skel-titulo-seccion { color: transparent; }
+        @keyframes skel-brillo { 0% { background-position: 220% 0; } 100% { background-position: -220% 0; } }
+        @media (prefers-reduced-motion: reduce) { .skel-bollo, .skel-linea, .skel-precio { animation: none; } }
         .seccion-titulo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #22201c; padding: 0 4px 14px; display: flex; align-items: center; gap: 10px; }
         .titulo-bar { width: 4px; height: 18px; background: #F0623E; border-radius: 2px; }
         .titulo-bar-verde { background: #3c8261; }
@@ -1242,8 +1355,9 @@ export default function MenuPage() {
         }
 
         /* ── TARJETA (2 por línea) ── */
-        .card { background: #fff; border: 1px solid #ece6dc; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.2s, transform 0.2s; }
-        .card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.07); transform: translateY(-1px); }
+        .card { background: #fff; border: 1px solid #ece6dc; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1); }
+        .card:hover { box-shadow: 0 12px 26px rgba(34,32,28,0.14); transform: translateY(-4px) rotate(-0.55deg); }
+        .grilla-lista .card:hover { transform: translateY(-2px) rotate(-0.3deg); }
         .card-agotado { opacity: 0.6; }
         .card-promo { border-color: rgba(61,74,47,0.25); }
 
@@ -1360,36 +1474,29 @@ export default function MenuPage() {
         .btn-red:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 18px rgba(0,0,0,0.24); }
         .btn-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .btn-red-fb { background: #1877f2; }
+        .btn-red-wa { background: #25d366; }
 
         /* ── GALERÍA: foto por foto, mazo apilado ── mismo lenguaje visual que el resto de la página (fondo claro, mismo
            estilo de título y botones que las demás secciones), para que se sienta parte del sitio y no un bloque aparte ── */
         .galeria-colapsable { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 0.5s cubic-bezier(0.22,0.8,0.3,1), opacity 0.35s ease; }
         .galeria-colapsable.cerrado { grid-template-rows: 0fr; opacity: 0; }
         .galeria-colapsable-inner { overflow: hidden; min-height: 0; }
-        .galeria-seccion { background: #fffbf5; border-bottom: 1px solid rgba(236,230,220,0.7); padding: 20px 0 22px; }
+        .galeria-seccion { background: #fffbf5; border-bottom: 1px solid rgba(236,230,220,0.7); padding: 12px 0 14px; }
 
         .galeria-inner { max-width: 760px; margin: 0 auto; padding: 0 16px; }
         .galeria-titulo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .galeria-titulo-compacta { font-size: 13px; font-weight: 600; color: #8a8378; text-align: center; margin-bottom: 8px; justify-content: center; letter-spacing: 0.01em; }
 
         .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .galeria-stack { position: relative; width: 100%; max-width: 172px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
-        .galeria-carta { position: absolute; inset: 0; border: 1px solid #ece6dc; padding: 0; margin: 0; cursor: grab; border-radius: 18px; overflow: hidden; background: #f3efe6; box-shadow: 0 6px 18px rgba(34,32,28,0.14); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
+        .galeria-stack { position: relative; width: 100%; max-width: 112px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
+        .galeria-carta { position: absolute; inset: 0; border: 1px solid #ece6dc; padding: 0; margin: 0; cursor: grab; border-radius: 14px; overflow: hidden; background: #f3efe6; box-shadow: 0 6px 18px rgba(34,32,28,0.14); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
         .galeria-carta:active { cursor: grabbing; }
         .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; -webkit-user-select: none; user-select: none; }
         .galeria-carta-p0 { transform: translateY(0) scale(1); z-index: 3; }
-        .galeria-carta-p1 { transform: translateY(16px) scale(0.93); z-index: 2; opacity: 0.85; }
-        .galeria-carta-p2 { transform: translateY(28px) scale(0.86); z-index: 1; opacity: 0.55; }
+        .galeria-carta-p1 { transform: translateY(10px) scale(0.93); z-index: 2; opacity: 0.85; }
+        .galeria-carta-p2 { transform: translateY(18px) scale(0.86); z-index: 1; opacity: 0.55; }
         .galeria-carta-sale { transition: transform 0.48s cubic-bezier(0.5,-0.2,0.7,0.4), opacity 0.4s ease 0.15s; transform: translate(130%,-10%) rotate(16deg) scale(0.92) !important; opacity: 0 !important; z-index: 4 !important; }
         .galeria-sin-transicion { transition: none !important; }
-
-        .galeria-ubicacion { margin-top: 16px; padding-top: 14px; border-top: 1px solid #ece6dc; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .galeria-direccion { display: flex; align-items: center; gap: 6px; color: #55504a; font-size: 12.5px; font-weight: 600; }
-        .galeria-direccion svg { color: #F0623E; flex-shrink: 0; }
-        .galeria-ubicacion-botones { display: flex; gap: 8px; width: 100%; max-width: 300px; }
-        .galeria-btn-primario { flex: 1; text-align: center; background: #F0623E; color: #fff; border: none; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
-        .galeria-btn-primario:hover { background: #D94E2C; }
-        .galeria-btn-secundario { flex: 1; background: #f3efe6; color: #55504a; border: none; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
-        .galeria-btn-secundario:hover { background: #ece2d0; color: #22201c; }
 
         @media (prefers-reduced-motion: reduce) {
           .galeria-carta { transition: none; }
@@ -1426,8 +1533,6 @@ export default function MenuPage() {
 
         @media (max-width: 380px) {
           .header-hero-sub { display: none; }
-          .btn-consulta-txt { display: none; }
-          .btn-consulta { padding: 9px; }
         }
       `}</style>
     </div>
