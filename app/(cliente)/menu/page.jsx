@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { useCarrito } from '../../../contexts/CarritoContext';
 import Checkout from '../../../components/cliente/Checkout';
@@ -768,6 +769,14 @@ export default function MenuPage() {
                   </div>
                 </div>
               )}
+
+              <div className="footer-col">
+                <h4>Legal</h4>
+                <ul className="footer-lista">
+                  <li><Link href="/privacidad">Política de Privacidad</Link></li>
+                  <li><Link href="/terminos">Términos y Condiciones</Link></li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
