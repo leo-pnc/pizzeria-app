@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 
 // ── Layout compartido para páginas legales/institucionales (Privacidad, Términos, etc.) ──
