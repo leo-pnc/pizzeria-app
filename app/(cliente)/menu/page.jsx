@@ -8,93 +8,6 @@ import { estaAbiertoAhora, proximaApertura, hayAvisoAperturaGuardado, cancelarAv
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-// ── Galería "foto por foto": mazo apilado, se puede deslizar con el dedo o avanza sola ──
-function GaleriaCocina({ fotos, onSelect }) {
-  const [idx, setIdx] = useState(0);
-  const [saliendo, setSaliendo] = useState(false);
-  const [sinTransicion, setSinTransicion] = useState(false);
-  const [arrastreX, setArrastreX] = useState(0);
-  const arrastrando = useRef(false);
-  const inicioX = useRef(0);
-  const fueArrastre = useRef(false);
-  const timerRef = useRef(null);
-
-  function programarSiguiente() {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (fotos.length <= 1) return;
-    timerRef.current = setInterval(() => avanzar(), 3000);
-  }
-
-  useEffect(() => {
-    programarSiguiente();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [fotos.length]);
-
-  function avanzar() {
-    setSaliendo(true);
-    setTimeout(() => {
-      setSinTransicion(true);
-      setIdx(prev => (prev + 1) % fotos.length);
-      setSaliendo(false);
-      setArrastreX(0);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setSinTransicion(false));
-      });
-    }, 480);
-  }
-
-  function manejarInicio(clientX) {
-    arrastrando.current = true;
-    fueArrastre.current = false;
-    inicioX.current = clientX;
-  }
-  function manejarMovimiento(clientX) {
-    if (!arrastrando.current) return;
-    const delta = clientX - inicioX.current;
-    if (Math.abs(delta) > 6) fueArrastre.current = true;
-    setArrastreX(delta);
-  }
-  function manejarFin() {
-    if (!arrastrando.current) return;
-    arrastrando.current = false;
-    if (Math.abs(arrastreX) > 55 && fotos.length > 1) {
-      programarSiguiente();
-      avanzar();
-    } else {
-      setArrastreX(0);
-    }
-  }
-
-  if (!fotos.length) return null;
-  const len = fotos.length;
-  const visibles = [0, 1, 2]
-    .filter(o => o < len)
-    .map(o => ({ foto: fotos[(idx + o) % len], indiceReal: (idx + o) % len, pos: o }));
-
-  return (
-    <div className="galeria-slider">
-      <div
-        className="galeria-stack"
-        onPointerDown={e => manejarInicio(e.clientX)}
-        onPointerMove={e => manejarMovimiento(e.clientX)}
-        onPointerUp={manejarFin}
-        onPointerLeave={manejarFin}
-      >
-        {visibles.slice().reverse().map(({ foto, indiceReal, pos }) => (
-          <button
-            key={foto.id}
-            className={`galeria-carta galeria-carta-p${pos} ${saliendo && pos === 0 ? 'galeria-carta-sale' : ''} ${sinTransicion ? 'galeria-sin-transicion' : ''}`}
-            style={pos === 0 && arrastreX !== 0 ? { transform: `translateX(${arrastreX}px) rotate(${arrastreX / 18}deg)`, transition: 'none' } : undefined}
-            onClick={() => { if (!fueArrastre.current) onSelect(indiceReal); }}
-          >
-            <img src={foto.imagen_url} alt={foto.descripcion || 'Foto del negocio'} draggable="false" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Revelado en scroll: cada sección de categoría hace un fade + slide sutil al entrar en pantalla
 // (una sola vez), en vez de aparecer de golpe con el resto de la página ──
 function useEnPantalla({ margen = '0px 0px -80px 0px', umbral = 0.12 } = {}) {
@@ -172,7 +85,7 @@ function IconoPlato({ tipo }) {
   return null;
 }
 
-function PlatosRebotando() {
+function PlatosRebotando({ variante = 'clara' }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setIdx(p => (p + 1) % PLATOS.length), 1500);
@@ -180,7 +93,7 @@ function PlatosRebotando() {
   }, []);
   const plato = PLATOS[idx];
   return (
-    <div className="splash-platos" aria-hidden="true">
+    <div className={`splash-platos ${variante === 'oscura' ? 'splash-platos-oscura' : ''}`} aria-hidden="true">
       <div className="splash-plato-stage">
         <div key={plato.id} className="splash-plato-icono"><IconoPlato tipo={plato.id} /></div>
         <span key={`sombra-${plato.id}`} className="splash-plato-sombra" />
@@ -211,8 +124,6 @@ export default function MenuPage() {
   const [busqueda, setBusqueda]           = useState('');
   const [showCheckout, setShowCheckout]   = useState(false);
   const [expandidoId, setExpandidoId]     = useState(null); // producto con descripción/variantes expandida
-  const [galeria, setGaleria]             = useState([]);
-  const [lightboxIdx, setLightboxIdx]     = useState(null);
   const [fotoAmpliada, setFotoAmpliada]   = useState(null); // { url, alt } de la foto de un producto/promo en grande
   const [splashListo, setSplashListo]     = useState(false);
   const [cargando, setCargando]           = useState(true);
@@ -227,7 +138,6 @@ export default function MenuPage() {
   const heroRef       = useRef(null);
   const navRef      = useRef(null);
   const dialogoRefs = {
-    lightboxGaleria: useRef(null),
     lightboxFoto: useRef(null),
     modalHorarios: useRef(null),
     modalReapertura: useRef(null),
@@ -246,12 +156,11 @@ export default function MenuPage() {
   // Accesibilidad de modales/lightboxes: Escape para cerrar (el que esté abierto),
   // foco inicial dentro del diálogo al abrir, y foco de vuelta a quien lo abrió al cerrar.
   useEffect(() => {
-    const hayModalAbierto = fotoAmpliada || lightboxIdx !== null || modalHorarios || modalReapertura || mostrarResumen;
+    const hayModalAbierto = fotoAmpliada || modalHorarios || modalReapertura || mostrarResumen;
 
     if (hayModalAbierto) {
       focoPrevioRef.current = document.activeElement;
       const ref = fotoAmpliada ? dialogoRefs.lightboxFoto
-        : lightboxIdx !== null ? dialogoRefs.lightboxGaleria
         : modalHorarios ? dialogoRefs.modalHorarios
         : modalReapertura ? dialogoRefs.modalReapertura
         : dialogoRefs.resumenCarrito;
@@ -265,7 +174,6 @@ export default function MenuPage() {
     function onKeyDown(e) {
       if (e.key === 'Escape') {
         if (fotoAmpliada) setFotoAmpliada(null);
-        else if (lightboxIdx !== null) setLightboxIdx(null);
         else if (modalHorarios) setModalHorarios(false);
         else if (modalReapertura) setModalReapertura(false);
         else if (mostrarResumen) setMostrarResumen(false);
@@ -275,7 +183,7 @@ export default function MenuPage() {
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
     }
-  }, [fotoAmpliada, lightboxIdx, modalHorarios, modalReapertura, mostrarResumen]);
+  }, [fotoAmpliada, modalHorarios, modalReapertura, mostrarResumen]);
 
   // Mantiene el foco dentro del diálogo abierto mientras se navega con Tab.
   function atraparFoco(e, ref) {
@@ -360,7 +268,7 @@ export default function MenuPage() {
     const [
       { data: cfg }, { data: cats }, { data: prods }, { data: vars },
       { data: promos }, { data: promoItems }, { data: mets },
-      { data: horarios }, { data: franjas }, { data: fotos },
+      { data: horarios }, { data: franjas },
     ] = await Promise.all([
       supabase.from('local_config').select('*').single(),
       supabase.from('categorias').select('*').eq('activa', true).order('orden'),
@@ -371,7 +279,6 @@ export default function MenuPage() {
       supabase.from('metodos_pago').select('*').eq('activo', true).order('orden'),
       supabase.from('horarios').select('*'),
       supabase.from('horario_franjas').select('*'),
-      supabase.from('galeria_fotos').select('*').order('created_at', { ascending: false }),
     ]);
 
     if (cfg && horarios && franjas) {
@@ -389,7 +296,6 @@ export default function MenuPage() {
       setPromociones(promos.map(pr => ({ ...pr, items: promoItems.filter(i => i.promocion_id === pr.id) })));
     }
     if (mets) setMetodos(mets);
-    if (fotos) setGaleria(fotos);
     setCargando(false);
   }
 
@@ -625,9 +531,6 @@ export default function MenuPage() {
     ...categorias.map(cat => ({ ...cat, count: productos.filter(p => p.categoria_id === cat.id).length })),
   ];
 
-  // Muestra la sección de fotos solo en "Todo" (sin búsqueda activa)
-  const mostrarGaleria = galeria.length > 0 && categoriaActiva === '__todo__' && !enBusqueda;
-
   return (
     <div className="pagina">
 
@@ -687,22 +590,6 @@ export default function MenuPage() {
         </header>
 
       </div>
-
-      {/* ── GALERÍA: foto por foto, salto rápido y pausa ── se colapsa suavemente al elegir una categoría, en vez de desaparecer de golpe.
-           Compacta a propósito: es un adorno de marca, no debe competir con el menú por espacio. La dirección, "Cómo llegar"
-           y los horarios viven en el pie de página, para no repetir la misma info dos veces en la misma pantalla. ── */}
-      {galeria.length > 0 && (
-        <div className={`galeria-colapsable ${mostrarGaleria ? '' : 'cerrado'}`}>
-          <div className="galeria-colapsable-inner">
-            <section className="galeria-seccion">
-              <div className="galeria-inner">
-                <h2 className="galeria-titulo galeria-titulo-compacta">Nuestra cocina</h2>
-                <GaleriaCocina fotos={galeria} onSelect={setLightboxIdx} />
-              </div>
-            </section>
-          </div>
-        </div>
-      )}
 
       {/* ── envuelve la navegación y los productos ── */}
       <div className="contenido-scroll">
@@ -873,41 +760,6 @@ export default function MenuPage() {
           © {new Date().getFullYear()} Don Adriano's · Todos los derechos reservados
         </div>
       </footer>
-
-      {/* ── LIGHTBOX DE GALERÍA ── */}
-      {lightboxIdx !== null && (
-        <div className="lightbox-backdrop" onClick={() => setLightboxIdx(null)}>
-          <div
-            ref={dialogoRefs.lightboxGaleria}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Foto ampliada"
-            onKeyDown={e => atraparFoco(e, dialogoRefs.lightboxGaleria)}
-            style={{ display: 'contents' }}
-          >
-          <button className="lightbox-close" aria-label="Cerrar" onClick={() => setLightboxIdx(null)}>✕</button>
-
-          {lightboxIdx > 0 && (
-            <button className="lightbox-nav lightbox-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i - 1); }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-          )}
-
-          <div className="lightbox-contenido" onClick={e => e.stopPropagation()}>
-            <img src={galeria[lightboxIdx].imagen_url} alt={galeria[lightboxIdx].descripcion || ''} />
-            {galeria[lightboxIdx].descripcion && (
-              <p className="lightbox-desc">{galeria[lightboxIdx].descripcion}</p>
-            )}
-          </div>
-
-          {lightboxIdx < galeria.length - 1 && (
-            <button className="lightbox-nav lightbox-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setLightboxIdx(i => i + 1); }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          )}
-          </div>
-        </div>
-      )}
 
       {/* ── LIGHTBOX DE FOTO DE PRODUCTO/PROMO ── */}
       {fotoAmpliada && (
@@ -1188,7 +1040,7 @@ export default function MenuPage() {
         .splash-plato-label { font-size: 10.5px; color: #b0a898; font-weight: 600; letter-spacing: 0.02em; }
 
         /* ── ELEMENTO GRÁFICO PROPIO: la llama se repite en los puntos donde se habla de cocina/horno
-           (pantalla de carga, "Nuestra cocina", confirmación de pedido) ── vuelve reconocible a la marca ── */
+           (pantalla de carga, confirmación de pedido) ── vuelve reconocible a la marca ── */
         .icono-llama { color: #F0623E; display: inline-flex; flex-shrink: 0; animation: llama-titilar 2.4s ease-in-out infinite; }
         @keyframes llama-titilar { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(-3deg); } }
 
@@ -1558,33 +1410,6 @@ export default function MenuPage() {
         .btn-red-fb { background: #1877f2; }
         .btn-red-wa { background: #25d366; }
 
-        /* ── GALERÍA: foto por foto, mazo apilado ── mismo lenguaje visual que el resto de la página (fondo claro, mismo
-           estilo de título y botones que las demás secciones), para que se sienta parte del sitio y no un bloque aparte ── */
-        .galeria-colapsable { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 0.5s cubic-bezier(0.22,0.8,0.3,1), opacity 0.35s ease; }
-        .galeria-colapsable.cerrado { grid-template-rows: 0fr; opacity: 0; }
-        .galeria-colapsable-inner { overflow: hidden; min-height: 0; }
-        .galeria-seccion { background: #fffbf5; border-bottom: 1px solid rgba(236,230,220,0.7); padding: 12px 0 14px; }
-
-        .galeria-inner { max-width: 760px; margin: 0 auto; padding: 0 16px; }
-        .galeria-titulo { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #22201c; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-        .galeria-titulo-compacta { font-size: 13px; font-weight: 600; color: #8a8378; text-align: center; margin-bottom: 8px; justify-content: center; letter-spacing: 0.01em; }
-
-        .galeria-slider { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .galeria-stack { position: relative; width: 100%; max-width: 112px; aspect-ratio: 4/5; margin: 0 auto; touch-action: pan-y; }
-        .galeria-carta { position: absolute; inset: 0; border: 1px solid #ece6dc; padding: 0; margin: 0; cursor: grab; border-radius: 14px; overflow: hidden; background: #f3efe6; box-shadow: 0 6px 18px rgba(34,32,28,0.14); transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease; touch-action: pan-y; }
-        .galeria-carta:active { cursor: grabbing; }
-        .galeria-carta img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; -webkit-user-select: none; user-select: none; }
-        .galeria-carta-p0 { transform: translateY(0) scale(1); z-index: 3; }
-        .galeria-carta-p1 { transform: translateY(10px) scale(0.93); z-index: 2; opacity: 0.85; }
-        .galeria-carta-p2 { transform: translateY(18px) scale(0.86); z-index: 1; opacity: 0.55; }
-        .galeria-carta-sale { transition: transform 0.48s cubic-bezier(0.5,-0.2,0.7,0.4), opacity 0.4s ease 0.15s; transform: translate(130%,-10%) rotate(16deg) scale(0.92) !important; opacity: 0 !important; z-index: 4 !important; }
-        .galeria-sin-transicion { transition: none !important; }
-
-        @media (prefers-reduced-motion: reduce) {
-          .galeria-carta { transition: none; }
-          .galeria-colapsable { transition: opacity 0.2s ease; }
-        }
-
         /* ── FOOTER ── */
         .footer { background: #22201c; color: #d8d2c8; margin-top: 0; }
         .footer-inner { max-width: 760px; margin: 0 auto; padding: 32px 16px 24px; display: flex; flex-direction: column; gap: 24px; }
@@ -1606,12 +1431,8 @@ export default function MenuPage() {
         /* ── LIGHTBOX ── */
         .lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .lightbox-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 16px; cursor: pointer; z-index: 2; }
-        .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
-        .lightbox-prev { left: 16px; }
-        .lightbox-next { right: 16px; }
         .lightbox-contenido { max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .lightbox-contenido img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
-        .lightbox-desc { color: #fff; font-size: 13px; text-align: center; max-width: 400px; }
 
         @media (max-width: 380px) {
           .header-hero-sub { display: none; }
