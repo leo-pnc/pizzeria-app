@@ -1011,7 +1011,10 @@ export default function MenuPage() {
               onKeyDown={e => atraparFoco(e, dialogoRefs.resumenCarrito)}
             >
               <div className="resumen-carrito-header">
-                <h2 id="resumen-carrito-titulo">Tu pedido</h2>
+                <div>
+                  <span className="resumen-carrito-eyebrow">Comanda</span>
+                  <h2 id="resumen-carrito-titulo">Tu pedido</h2>
+                </div>
                 <button className="resumen-carrito-close" aria-label="Cerrar resumen" onClick={() => setMostrarResumen(false)}>✕</button>
               </div>
 
@@ -1194,28 +1197,43 @@ export default function MenuPage() {
         .barra-carrito-texto { flex: 1; text-align: left; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
         .barra-carrito-texto strong { font-size: 16px; font-weight: 800; }
         .barra-carrito-texto span { font-size: 12.5px; color: #c9c2b6; }
-        .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; }
+        .barra-carrito-precio { font-size: 18px; font-weight: 800; color: #f0c675; flex-shrink: 0; font-family: 'Courier New', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
 
-        /* ── MINI-RESUMEN DEL PEDIDO ── */
+        /* ── MINI-RESUMEN DEL PEDIDO: tratado como una comanda real de pizzería — borde superior perforado
+           (como si se arrancara de un talonario), números alineados como impresora térmica, separadores
+           punteados en vez de líneas planas. Es el momento en que más se usa la app, así que el carácter
+           va acá y no en decoración de fondo. ── */
         .resumen-carrito {
           flex-shrink: 1; min-height: 0; display: flex; flex-direction: column;
           background: #fffbf5; border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,0.22);
           overflow: hidden; animation: resumenEntrar 0.22s ease;
+          position: relative; padding-top: 9px;
+        }
+        .resumen-carrito::before {
+          content: '';
+          position: absolute; top: 0; left: 16px; right: 16px; height: 9px;
+          background-image: radial-gradient(circle, rgba(34,32,28,0.16) 1.7px, transparent 1.9px);
+          background-size: 12px 9px;
+          background-repeat: repeat-x;
+          background-position: top center;
+          pointer-events: none;
         }
         @keyframes resumenEntrar { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .resumen-carrito-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; flex-shrink: 0; }
+        .resumen-carrito-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 16px 10px; flex-shrink: 0; border-bottom: 1px dashed #ddd3c2; }
+        .resumen-carrito-eyebrow { display: block; font-family: 'Courier New', ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #b0a898; margin-bottom: 1px; }
         .resumen-carrito-header h2 { font-size: 15px; font-weight: 800; color: #22201c; margin: 0; }
         .resumen-carrito-close { background: #f3efe6; border: none; width: 26px; height: 26px; border-radius: 50%; color: #8a8378; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .resumen-carrito-lista { overflow-y: auto; min-height: 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
-        .resumen-fila { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #f0ece3; }
+        .resumen-fila { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px dashed #ddd3c2; }
+        .resumen-fila:first-child { padding-top: 12px; }
         .resumen-fila:last-child { border-bottom: none; padding-bottom: 4px; }
         .resumen-fila-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
         .resumen-fila-nombre { font-size: 13px; font-weight: 700; color: #22201c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .resumen-fila-preciounit { font-size: 11.5px; color: #8a8378; }
-        .resumen-fila-total { font-size: 13px; font-weight: 800; color: #22201c; flex-shrink: 0; min-width: 52px; text-align: right; }
-        .resumen-carrito-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 16px; }
-        .resumen-carrito-subtotal { font-size: 13px; color: #8a8378; }
-        .resumen-carrito-subtotal strong { font-size: 16px; color: #22201c; margin-left: 4px; }
+        .resumen-fila-preciounit { font-size: 11.5px; color: #8a8378; font-family: 'Courier New', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+        .resumen-fila-total { font-size: 13.5px; font-weight: 800; color: #22201c; flex-shrink: 0; min-width: 56px; text-align: right; font-family: 'Courier New', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+        .resumen-carrito-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px 16px; border-top: 1px dashed #ddd3c2; margin-top: 2px; }
+        .resumen-carrito-subtotal { font-size: 11.5px; color: #8a8378; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+        .resumen-carrito-subtotal strong { font-size: 17px; color: #22201c; margin-left: 6px; font-family: 'Courier New', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
         .resumen-carrito-btn { background: #F0623E; color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; flex-shrink: 0; }
         .resumen-carrito-btn:hover { background: #D94E2C; }
 
@@ -1226,7 +1244,7 @@ export default function MenuPage() {
         .abierto { color: #3c8261; }
         .abierto .estado-dot { background: #3c8261; box-shadow: 0 0 0 3px rgba(61,74,47,0.15); animation: pulso-verde 2s infinite; }
         @keyframes pulso-verde { 0%,100%{box-shadow:0 0 0 3px rgba(61,74,47,0.15)} 50%{box-shadow:0 0 0 5px rgba(61,74,47,0.08)} }
-        @keyframes insignia-flotar { 0%,100%{ transform: translateY(0) rotate(0deg); } 50%{ transform: translateY(-3px) rotate(-3deg); } }
+
         @keyframes boton-resplandor { 0%,100%{ box-shadow: 0 2px 8px rgba(240,98,62,0.25); } 50%{ box-shadow: 0 3px 14px rgba(240,98,62,0.5); } }
         .cerrado { color: #D94E2C; }
         .cerrado .estado-dot { background: #D94E2C; }
@@ -1371,8 +1389,24 @@ export default function MenuPage() {
         .card-img-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c4bcae; font-size: 12px; }
         .card-img-ph-promo { background: linear-gradient(135deg, #f3efe6, #eae3d4); }
         .card-badge-agotado { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; background: #fff; color: #F0623E; border-radius: 6px; padding: 3px 7px; }
-        .card-badge-nuevo { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #d9a534; color: #fff; border-radius: 6px; padding: 3px 8px; box-shadow: 0 2px 6px rgba(217,165,52,0.4); animation: insignia-flotar 2.6s ease-in-out infinite; }
-        .card-badge-promo { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #3c8261; color: #fff; border-radius: 6px; padding: 3px 8px; }
+        /* ── Sellos "Nuevo"/"Promo": estampitas de tinta rotadas, como el sello de una comanda,
+           en vez de etiquetas redondeadas planas ── */
+        .card-badge-nuevo, .card-badge-promo {
+          position: absolute; top: 10px; left: 10px;
+          font-family: 'Courier New', ui-monospace, Menlo, monospace;
+          font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+          padding: 3px 8px 3.5px;
+          border: 1.5px solid currentColor;
+          border-radius: 3px;
+          background: rgba(255,251,245,0.88);
+          box-shadow: 0 2px 5px rgba(34,32,28,0.18);
+        }
+        .card-badge-nuevo { color: #b5791a; transform: rotate(-7deg); animation: sello-estampar 0.35s cubic-bezier(0.2,1.4,0.4,1) both; }
+        .card-badge-promo { color: #3c8261; transform: rotate(5deg); animation: sello-estampar 0.35s cubic-bezier(0.2,1.4,0.4,1) both; }
+        @keyframes sello-estampar { from { opacity: 0; transform: scale(1.6) rotate(0deg); } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+          .card-badge-nuevo, .card-badge-promo { animation: none; }
+        }
 
         .card-body { padding: 10px 11px 12px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
         .card-nombre { font-size: 13.5px; font-weight: 700; color: #22201c; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 35px; }
