@@ -552,20 +552,13 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ── HERO: subtítulo + estado. Vive en el flujo normal de la página (no es sticky), así que se va con el scroll
-           de forma 100% nativa del navegador, sin ningún JS que decida "cuándo". Esto es lo que hace que arriba del todo
-           se vea el header "expandido" y, apenas se hace scroll, se vea "comprimido" — sin posibilidad de parpadeos
-           ni loops, porque no hay ningún estado de React decidiendo el tamaño de nada. ── */}
+      {/* ── HERO: subtítulo. Vive en el flujo normal de la página (no es sticky), así que se va con el scroll
+           de forma 100% nativa del navegador, sin ningún JS que decida "cuándo". ── */}
       <div className="header-hero" ref={heroRef}>
-        <span className="header-hero-sub">Pizzería · San José, Guaymallén, Mendoza</span>
-        {abierto !== null && (
-          <div className={`estado-bar ${abierto ? 'abierto' : 'cerrado'}`}>
-            <span className="estado-dot" />
-            <span>
-              {abierto ? 'Aceptando pedidos ahora' : proxApertura ? `Cerrado ahora · Abrimos ${proxApertura}` : 'Cerrado por el momento'}
-            </span>
-          </div>
-        )}
+        <span className="header-hero-sub">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          San José, Guaymallén, Mendoza
+        </span>
       </div>
 
       {/* ── BARRA STICKY: tamaño siempre constante (nunca anima su layout), por eso no puede retroalimentarse con el scroll.
@@ -577,7 +570,15 @@ export default function MenuPage() {
               <span className="header-logo-wrap">
                 <img src="/logo.png" alt="Don Adriano's" className="header-logo" />
               </span>
-              <h1 className="header-nombre">Don Adriano's</h1>
+              <div className="header-texto">
+                <h1 className="header-nombre">Don Adriano's</h1>
+                {abierto !== null && (
+                  <span className={`header-estado ${abierto ? 'abierto' : 'cerrado'}`}>
+                    <span className="header-estado-dot" />
+                    {abierto ? 'Abierto ahora' : proxApertura ? `Cerrado · Abre ${proxApertura}` : 'Cerrado'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1073,24 +1074,40 @@ export default function MenuPage() {
         .icono-llama { color: #F0623E; display: inline-flex; flex-shrink: 0; animation: llama-titilar 2.4s ease-in-out infinite; }
         @keyframes llama-titilar { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(-3deg); } }
 
-        /* ── HERO: subtítulo + estado. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
-        .header-hero { max-width: 760px; margin: 0 auto; padding: 6px 16px 0; }
-        .header-hero-sub { display: block; font-size: 11px; color: #8a8378; padding: 6px 0 2px; }
+        /* ── HERO: subtítulo. Flujo normal, no sticky → se va con el scroll de forma 100% nativa ── */
+        .header-hero { max-width: 760px; margin: 0 auto; padding: 8px 16px 0; }
+        .header-hero-sub { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; color: #8a8378; padding: 6px 0 8px; }
+        .header-hero-sub svg { color: #c9a876; flex-shrink: 0; }
 
         /* ── BARRA STICKY: tamaño siempre constante, nunca anima layout. Solo cambia una sombra cosmética ── */
         .sticky-top { position: sticky; top: 0; z-index: 30; background: rgba(255,251,245,0.96); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); transition: box-shadow 0.25s ease; }
         .sticky-top.con-sombra { box-shadow: 0 2px 14px rgba(0,0,0,0.08); }
 
-        .header { border-bottom: 1px solid rgba(236,230,220,0.7); }
-        .header-inner { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .header-marca { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
-        .header-logo-wrap {
-          width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
-          background: #fffbf5; display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 2px 8px rgba(34,32,28,0.12), 0 0 0 1px rgba(236,230,220,0.9);
+        .header { border-bottom: 1px solid rgba(236,230,220,0.7); position: relative; }
+        .header::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          background: linear-gradient(90deg, #F0623E, #d9a534 50%, #3c8261);
+          opacity: 0.85;
         }
-        .header-logo { width: 34px; height: 34px; object-fit: contain; }
-        .header-nombre { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; color: #E0562F; letter-spacing: -0.01em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .header-inner { max-width: 760px; margin: 0 auto; padding: 12px 16px 11px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .header-marca { display: flex; align-items: center; gap: 13px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+        .header-logo-wrap {
+          width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+          background: #fffbf5; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 8px rgba(34,32,28,0.14), 0 0 0 2px #fffbf5, 0 0 0 3.5px rgba(240,98,62,0.35);
+        }
+        .header-logo { width: 35px; height: 35px; object-fit: contain; }
+        .header-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .header-nombre { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: #22201c; letter-spacing: -0.015em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .header-estado {
+          display: inline-flex; align-items: center; gap: 5px; width: fit-content;
+          font-size: 11px; font-weight: 600; padding: 2px 8px 2px 6px; border-radius: 20px;
+        }
+        .header-estado.abierto { color: #3c8261; background: rgba(61,130,97,0.1); }
+        .header-estado.cerrado { color: #b5401f; background: rgba(217,78,44,0.09); }
+        .header-estado-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .header-estado.abierto .header-estado-dot { background: #3c8261; box-shadow: 0 0 0 2.5px rgba(61,130,97,0.18); animation: pulso-verde 2s infinite; }
+        .header-estado.cerrado .header-estado-dot { background: #D94E2C; }
         .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
         /* ── CARRITO FLOTANTE — wrapper fijo que apila barra + resumen ── */
@@ -1179,12 +1196,13 @@ export default function MenuPage() {
         .cerrado .estado-dot { background: #D94E2C; }
 
         /* ── BUSCADOR ── */
-        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 10px; }
+        .busq-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 12px; }
         .busq-inner { position: relative; }
-        .busq-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8a8378; pointer-events: none; }
-        .busq-input { width: 100%; background: #f3efe6; border: 1.5px solid #ece6dc; border-radius: 10px; padding: 10px 36px; font-size: 14px; color: #22201c; font-family: inherit; outline: none; transition: border-color 0.15s; }
-        .busq-input:focus { border-color: #F0623E; background: #fff; }
-        .busq-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #8a8378; font-size: 14px; cursor: pointer; padding: 4px; }
+        .busq-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #b0a898; pointer-events: none; }
+        .busq-input { width: 100%; background: #f6f2e9; border: 1.5px solid transparent; border-radius: 12px; padding: 11px 38px; font-size: 14px; color: #22201c; font-family: inherit; outline: none; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+        .busq-input::placeholder { color: #ab9f8c; }
+        .busq-input:focus { border-color: #F0623E; background: #fff; box-shadow: 0 0 0 4px rgba(240,98,62,0.1); }
+        .busq-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #ece2d0; border: none; color: #6b6255; font-size: 11px; cursor: pointer; padding: 5px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
         /* ── NAV CATEGORÍAS ── */
         .cat-nav { border-bottom: 1px solid rgba(236,230,220,0.7); overflow-x: auto; -webkit-overflow-scrolling: touch; }
