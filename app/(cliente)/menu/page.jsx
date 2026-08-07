@@ -153,6 +153,43 @@ function SkeletonMenu() {
   );
 }
 
+// ── Platos rebotando en la pantalla de carga: uno a la vez, entra con un rebote y pausa, como una vidriera
+// asomando lo que se puede pedir mientras se espera ── siluetas propias, mismo estilo que el ícono de la llama ──
+const PLATOS = [
+  { id: 'pizza', label: 'Pizza' },
+  { id: 'empanada', label: 'Empanadas' },
+  { id: 'lomo', label: 'Lomitos' },
+  { id: 'hamburguesa', label: 'Hamburguesas' },
+  { id: 'papas', label: 'Papas fritas' },
+];
+
+function IconoPlato({ tipo }) {
+  if (tipo === 'pizza') return <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L22.5 21c-3 1.6-6.6 2.5-10.5 2.5S4.5 22.6 1.5 21L12 2z"/></svg>;
+  if (tipo === 'empanada') return <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 0 1 0 18V3z"/><path d="M12 3a9 9 0 0 0 0 18V3z" opacity="0.55"/></svg>;
+  if (tipo === 'lomo') return <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="18" height="4" rx="2"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="2"/></svg>;
+  if (tipo === 'hamburguesa') return <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8a8 6 0 0 1 16 0z"/><rect x="3" y="10" width="18" height="3" rx="1.5"/><rect x="3" y="14" width="18" height="3" rx="1.5"/><rect x="3" y="18" width="18" height="3" rx="1.5"/></svg>;
+  if (tipo === 'papas') return <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M5 10h14l-2 12H7z"/><rect x="6" y="4" width="2.4" height="10" rx="1"/><rect x="10.8" y="2" width="2.4" height="12" rx="1"/><rect x="15.6" y="5" width="2.4" height="9" rx="1"/></svg>;
+  return null;
+}
+
+function PlatosRebotando() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIdx(p => (p + 1) % PLATOS.length), 1500);
+    return () => clearInterval(id);
+  }, []);
+  const plato = PLATOS[idx];
+  return (
+    <div className="splash-platos" aria-hidden="true">
+      <div className="splash-plato-stage">
+        <div key={plato.id} className="splash-plato-icono"><IconoPlato tipo={plato.id} /></div>
+        <span key={`sombra-${plato.id}`} className="splash-plato-sombra" />
+      </div>
+      <span className="splash-plato-label">{plato.label}</span>
+    </div>
+  );
+}
+
 export default function MenuPage() {
   const { items, agregar, quitar, cantidad, subtotal } = useCarrito();
 
@@ -606,6 +643,7 @@ export default function MenuPage() {
             Amasando la página
             <span className="marca-splash-puntos"><span>.</span><span>.</span><span>.</span></span>
           </p>
+          <PlatosRebotando />
         </div>
       )}
 
@@ -1137,7 +1175,17 @@ export default function MenuPage() {
           .marca-splash-logo { animation: none; }
           .marca-splash-puntos span { animation: none; opacity: 0.6; }
           .icono-llama { animation: none; }
+          .splash-plato-icono, .splash-plato-sombra { animation: none; }
         }
+
+        /* ── Platos rebotando: uno a la vez, entra con rebote (bun/sombra), pausa, y el siguiente lo reemplaza ── */
+        .splash-platos { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 8px; }
+        .splash-plato-stage { position: relative; width: 44px; height: 40px; display: flex; align-items: flex-end; justify-content: center; }
+        .splash-plato-icono { color: #F0623E; display: flex; animation: plato-rebote 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .splash-plato-sombra { position: absolute; bottom: -1px; width: 24px; height: 5px; border-radius: 50%; background: rgba(34,32,28,0.16); animation: sombra-rebote 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+        @keyframes plato-rebote { 0% { opacity: 0; transform: translateY(-16px) scale(0.6); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes sombra-rebote { 0% { opacity: 0; transform: scaleX(0.3); } 60% { opacity: 0.4; } 100% { opacity: 1; transform: scaleX(1); } }
+        .splash-plato-label { font-size: 10.5px; color: #b0a898; font-weight: 600; letter-spacing: 0.02em; }
 
         /* ── ELEMENTO GRÁFICO PROPIO: la llama se repite en los puntos donde se habla de cocina/horno
            (pantalla de carga, "Nuestra cocina", confirmación de pedido) ── vuelve reconocible a la marca ── */
