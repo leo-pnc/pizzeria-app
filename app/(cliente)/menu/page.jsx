@@ -85,12 +85,13 @@ function IconoPlato({ tipo }) {
   return null;
 }
 
-function PlatosRebotando({ variante = 'clara' }) {
+function PlatosRebotando({ variante = 'clara', reduceMotion = false }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
+    if (reduceMotion) return; // sin ciclo automático: se queda en el primer plato, quieto
     const id = setInterval(() => setIdx(p => (p + 1) % PLATOS.length), 1500);
     return () => clearInterval(id);
-  }, []);
+  }, [reduceMotion]);
   const plato = PLATOS[idx];
   return (
     <div className={`splash-platos ${variante === 'oscura' ? 'splash-platos-oscura' : ''}`} aria-hidden="true">
@@ -546,7 +547,7 @@ export default function MenuPage() {
             Amasando la página
             <span className="marca-splash-puntos"><span>.</span><span>.</span><span>.</span></span>
           </p>
-          <PlatosRebotando />
+          <PlatosRebotando reduceMotion={reduceMotion} />
         </div>
       )}
 
@@ -712,52 +713,71 @@ export default function MenuPage() {
       {/* ── FOOTER ── */}
       <footer className="footer">
         <div className="footer-inner">
-          <div className="footer-marca">
-            <img src="/logo.png" alt="Don Adriano's" className="footer-logo" />
-            <div>
-              <h3>Don Adriano's</h3>
-              <p>Pizzería · San José, Guaymallén, Mendoza</p>
-            </div>
-          </div>
-
-          <div className="footer-columnas">
-            <div className="footer-col">
-              <h4>Contacto</h4>
-              {config?.whatsapp_numero && (
-                <a href={`https://wa.me/${config.whatsapp_numero}`} target="_blank" rel="noopener noreferrer">
-                  WhatsApp
-                </a>
-              )}
-              <button className="footer-link-btn" onClick={() => setModalHorarios(true)}>Horarios</button>
-              {config?.latitud_local && (
-                <a href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
-                  Cómo llegar
-                </a>
-              )}
-            </div>
-
-            {(config?.instagram_url || config?.facebook_url) && (
-              <div className="footer-col">
-                <h4>Seguinos</h4>
-                <div className="footer-redes">
-                  {config.instagram_url && (
-                    <a href={config.instagram_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-ig" aria-label="Instagram">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                    </a>
-                  )}
-                  {config.facebook_url && (
-                    <a href={config.facebook_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-fb" aria-label="Facebook">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                    </a>
-                  )}
-                </div>
+          <div className="footer-top">
+            <div className="footer-marca">
+              <img src="/logo.png" alt="Don Adriano's" className="footer-logo" />
+              <div>
+                <h3>Don Adriano's</h3>
+                <p>Pizzería artesanal · San José, Guaymallén, Mendoza</p>
               </div>
-            )}
+            </div>
+
+            <div className="footer-columnas">
+              <div className="footer-col">
+                <h4>Contacto</h4>
+                <ul className="footer-lista">
+                  {config?.whatsapp_numero && (
+                    <li>
+                      <a href={`https://wa.me/${config.whatsapp_numero}`} target="_blank" rel="noopener noreferrer">
+                        <svg className="footer-link-icono" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0012.05 0z"/></svg>
+                        WhatsApp
+                      </a>
+                    </li>
+                  )}
+                  <li>
+                    <button className="footer-link-btn" onClick={() => setModalHorarios(true)}>
+                      <svg className="footer-link-icono" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+                      Horarios de atención
+                    </button>
+                  </li>
+                  {config?.latitud_local && (
+                    <li>
+                      <a href={`https://maps.google.com/?q=${config.latitud_local},${config.longitud_local}`} target="_blank" rel="noopener noreferrer">
+                        <svg className="footer-link-icono" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Cómo llegar
+                      </a>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {(config?.instagram_url || config?.facebook_url) && (
+                <div className="footer-col">
+                  <h4>Seguinos</h4>
+                  <div className="footer-redes">
+                    {config.instagram_url && (
+                      <a href={config.instagram_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-ig" aria-label="Instagram">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                      </a>
+                    )}
+                    {config.facebook_url && (
+                      <a href={config.facebook_url} target="_blank" rel="noopener noreferrer" className="footer-red footer-red-fb" aria-label="Facebook">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="footer-bottom">
-          © {new Date().getFullYear()} Don Adriano's · Todos los derechos reservados
+          <div className="footer-bottom-inner">
+            <span>© {new Date().getFullYear()} Don Adriano's. Todos los derechos reservados.</span>
+            <span className="footer-bottom-sep" aria-hidden="true">·</span>
+            <span>Pedidos por WhatsApp</span>
+          </div>
         </div>
       </footer>
 
@@ -1411,22 +1431,43 @@ export default function MenuPage() {
         .btn-red-wa { background: #25d366; }
 
         /* ── FOOTER ── */
-        .footer { background: #22201c; color: #d8d2c8; margin-top: 0; }
-        .footer-inner { max-width: 760px; margin: 0 auto; padding: 32px 16px 24px; display: flex; flex-direction: column; gap: 24px; }
-        .footer-marca { display: flex; align-items: center; gap: 12px; }
-        .footer-logo { width: 44px; height: 44px; border-radius: 50%; object-fit: contain; background: #fff; flex-shrink: 0; }
-        .footer-marca h3 { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #fff; margin: 0; }
-        .footer-marca p { font-size: 12px; color: #a39c8f; margin: 2px 0 0; }
-        .footer-columnas { display: flex; gap: 40px; flex-wrap: wrap; }
-        .footer-col { display: flex; flex-direction: column; gap: 8px; }
-        .footer-col h4 { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #a39c8f; margin: 0 0 4px; }
-        .footer-col a, .footer-link-btn { font-size: 13.5px; color: #d8d2c8; text-decoration: none; background: none; border: none; padding: 0; text-align: left; cursor: pointer; font-family: inherit; width: fit-content; }
-        .footer-col a:hover, .footer-link-btn:hover { color: #fff; text-decoration: underline; }
-        .footer-redes { display: flex; gap: 8px; }
-        .footer-red { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .footer { background: #1c1a17; color: #d8d2c8; margin-top: 0; position: relative; }
+        .footer::before {
+          content: ''; display: block; height: 3px; width: 100%;
+          background: linear-gradient(90deg, #F0623E, #d9a534 50%, #3c8261);
+          opacity: 0.9;
+        }
+        .footer-inner { max-width: 760px; margin: 0 auto; padding: 40px 16px 28px; }
+        .footer-top { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .footer-marca { display: flex; align-items: flex-start; gap: 14px; flex: 1 1 220px; min-width: 220px; }
+        .footer-logo { width: 48px; height: 48px; border-radius: 50%; object-fit: contain; background: #fff; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+        .footer-marca h3 { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: #fff; margin: 0; letter-spacing: -0.01em; }
+        .footer-marca p { font-size: 12.5px; color: #a39c8f; margin: 4px 0 0; line-height: 1.5; }
+        .footer-columnas { display: flex; gap: 56px; flex-wrap: wrap; }
+        .footer-col { display: flex; flex-direction: column; gap: 10px; min-width: 120px; }
+        .footer-col h4 { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8378; margin: 0 0 2px; }
+        .footer-lista { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+        .footer-col a, .footer-link-btn {
+          display: inline-flex; align-items: center; gap: 8px;
+          font-size: 13.5px; color: #d8d2c8; text-decoration: none; background: none; border: none;
+          padding: 0; text-align: left; cursor: pointer; font-family: inherit; width: fit-content;
+          transition: color 0.15s ease;
+        }
+        .footer-link-icono { color: #8a8378; flex-shrink: 0; transition: color 0.15s ease; }
+        .footer-col a:hover, .footer-link-btn:hover { color: #fff; }
+        .footer-col a:hover .footer-link-icono, .footer-link-btn:hover .footer-link-icono { color: #F0623E; }
+        .footer-redes { display: flex; gap: 10px; }
+        .footer-red { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: transform 0.15s ease; }
+        .footer-red:hover { transform: translateY(-2px); }
         .footer-red-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
         .footer-red-fb { background: #1877f2; }
-        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; text-align: center; font-size: 11.5px; color: #8a8378; }
+        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.07); padding: 16px 16px; background: #17150f; }
+        .footer-bottom-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; text-align: center; font-size: 11.5px; color: #8a8378; letter-spacing: 0.01em; }
+        .footer-bottom-sep { color: #4a463e; }
+        @media (max-width: 480px) {
+          .footer-top { flex-direction: column; gap: 26px; }
+          .footer-columnas { gap: 32px; }
+        }
 
         /* ── LIGHTBOX ── */
         .lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }

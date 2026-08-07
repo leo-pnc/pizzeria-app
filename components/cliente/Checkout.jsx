@@ -327,7 +327,6 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         pedido_id: pedido.id, producto_id: it.tipo === 'producto' ? it.id : null,
         promocion_id: it.tipo === 'promo' ? it.id : null, variante_id: it.variante_id || null,
         nombre_snapshot: it.nombre_snapshot, precio_unitario: it.precio, cantidad: it.cantidad,
-        detalle_seleccion: it.detalle_seleccion || null,
       }))
     );
 
