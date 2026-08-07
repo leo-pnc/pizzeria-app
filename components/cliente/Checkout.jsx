@@ -413,6 +413,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
             <span className="ch-item-nombre">{it.nombre_snapshot}</span>
             <span className="ch-item-precio-unit">${it.precio.toLocaleString('es-AR')} c/u</span>
           </div>
+          <span className="ch-item-total">${(it.precio * it.cantidad).toLocaleString('es-AR')}</span>
           <div className="ch-item-ctrl" onClick={e => e.stopPropagation()}>
             <button className="ch-ctrl" onClick={() => manejarMenos(it)}>−</button>
             <span className="ch-ctrl-cant">{it.cantidad}</span>
@@ -459,7 +460,10 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
           <div className="ch-header">
             <div className="ch-header-l">
               {pasoIdx > 0 && <button className="ch-back" onClick={() => volverA(paso)}>←</button>}
-              <h2 className="ch-titulo">{LABELS_PASO[paso] === 'Pedido' ? 'Tu pedido' : LABELS_PASO[paso]}</h2>
+              <div className="ch-titulo-wrap">
+                {paso === 'carrito' && <span className="ch-eyebrow">COMANDA</span>}
+                <h2 className="ch-titulo">{LABELS_PASO[paso] === 'Pedido' ? 'Tu pedido' : LABELS_PASO[paso]}</h2>
+              </div>
             </div>
             <button className="ch-close" onClick={onClose}>✕</button>
           </div>
@@ -794,6 +798,8 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-handle { width: 36px; height: 4px; background: #ddd8d0; border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
         .ch-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; }
         .ch-header-l { display: flex; align-items: center; gap: 10px; }
+        .ch-titulo-wrap { display: flex; flex-direction: column; gap: 2px; }
+        .ch-eyebrow { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: #b0a898; }
         .ch-back { background: #f0ebe3; border: none; color: #1a1510; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .ch-titulo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: #1a1510; margin: 0; }
         .ch-close { background: #f0ebe3; border: none; color: #9a8f82; border-radius: 50%; width: 32px; height: 32px; font-size: 14px; cursor: pointer; }
@@ -803,7 +809,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-banner-error span { flex: 1; }
         .ch-banner-error button { background: none; border: none; color: #b5281f; font-size: 14px; cursor: pointer; padding: 0; flex-shrink: 0; }
 
-        .ch-steps { display: flex; align-items: center; padding: 0 16px 12px; flex-shrink: 0; border-bottom: 1px solid #ede8e0; gap: 2px; overflow-x: auto; }
+        .ch-steps { display: flex; align-items: center; padding: 0 16px 12px; flex-shrink: 0; border-bottom: 1px dashed #ddd8d0; gap: 2px; overflow-x: auto; }
         .ch-step { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
         .ch-step:not(:last-child)::after { content: ''; width: 14px; height: 1px; background: #ddd8d0; margin: 0 3px; }
         .ch-step-dot { width: 20px; height: 20px; border-radius: 50%; background: #ddd8d0; color: #9a8f82; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -819,7 +825,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-envio-info svg { color: #F0623E; }
 
         .ch-item-wrap { position: relative; overflow: hidden; border-radius: 10px; }
-        .ch-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #faf7f2; transition: transform 0.2s; position: relative; z-index: 1; border-bottom: 1px solid #ede8e0; touch-action: pan-y; cursor: grab; }
+        .ch-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #faf7f2; transition: transform 0.2s; position: relative; z-index: 1; border-bottom: 1px dashed #ddd8d0; touch-action: pan-y; cursor: grab; }
         .ch-item-revelado { transform: translateX(-64px); }
         .ch-item-trash { position: absolute; top: 0; right: 0; bottom: 0; width: 64px; background: #F0623E; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .ch-item-img { width: 46px; height: 46px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f0ebe3; }
@@ -827,14 +833,22 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-item-img-ph { width: 100%; height: 100%; background: #f0ebe3; }
         .ch-item-info { flex: 1; min-width: 0; }
         .ch-item-nombre { font-size: 14px; font-weight: 600; display: block; color: #1a1510; }
-        .ch-item-precio-unit { font-size: 12px; color: #9a8f82; display: block; margin-top: 2px; }
+        .ch-item-precio-unit { font-size: 12px; color: #9a8f82; display: block; margin-top: 2px; font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+        .ch-item-total { font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 700; color: #1a1510; flex-shrink: 0; }
         .ch-item-ctrl { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .ch-ctrl { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #F0623E; background: transparent; color: #F0623E; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .ch-ctrl-cant { font-size: 14px; font-weight: 700; min-width: 16px; text-align: center; color: #1a1510; }
 
-        .ch-resumen { background: #fff; border: 1px solid #ede8e0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+        .ch-resumen { position: relative; background: #fff; border: 1px solid #ede8e0; border-radius: 12px; padding: 20px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .ch-resumen::before {
+          content: '';
+          position: absolute; top: -1px; left: 12px; right: 12px; height: 3px;
+          background-image: radial-gradient(circle, #ddd8d0 1.4px, transparent 1.5px);
+          background-size: 9px 3px; background-repeat: repeat-x; background-position: top center;
+        }
         .ch-resumen-row { display: flex; justify-content: space-between; font-size: 14px; color: #6b6259; }
-        .ch-resumen-total { font-size: 18px; font-weight: 700; color: #1a1510; padding-top: 8px; border-top: 1px solid #ede8e0; margin-top: 4px; }
+        .ch-resumen-row span:last-child { font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+        .ch-resumen-total { font-size: 18px; font-weight: 700; color: #1a1510; padding-top: 8px; border-top: 1px dashed #ddd8d0; margin-top: 4px; }
 
         .ch-pago-efectivo { background: #fff; border: 2px solid #ede8e0; border-radius: 12px; overflow: hidden; }
         .ch-pago-efectivo.activo { border-color: #F0623E; }
@@ -912,7 +926,7 @@ export default function Checkout({ config, metodos, abierto, proxApertura, horar
         .ch-explicacion-envio { font-size: 12.5px; color: #6b6259; line-height: 1.6; background: #f3efe9; border-radius: 10px; padding: 12px 14px; margin: 0; }
         .ch-explicacion-envio strong { color: #1a1510; }
 
-        .ch-footer { padding: 12px 20px; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #ede8e0; flex-shrink: 0; }
+        .ch-footer { padding: 12px 20px; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-top: 1px dashed #ddd8d0; flex-shrink: 0; }
         .ch-btn-primario { width: 100%; background: #1a1510; color: #faf7f2; border: none; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; font-family: inherit; cursor: pointer; }
         .ch-btn-primario:disabled { background: #ddd8d0; color: #a39c8f; cursor: default; }
         .ch-btn-pedir { width: 100%; background: #25d366; color: #fff; border: none; border-radius: 12px; padding: 17px; font-size: 17px; font-weight: 800; letter-spacing: 0.03em; font-family: inherit; cursor: pointer; }
