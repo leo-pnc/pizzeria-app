@@ -38,6 +38,51 @@ function Seccion({ className = '', children }) {
   );
 }
 
+// ── Fila horizontal con flechas que se esconden solas cuando ya no hay para dónde scrollear
+// (antes las dos flechas quedaban siempre visibles, aunque ya estuvieras en una punta) ──
+function FilaHorizontal({ children }) {
+  const scrollRef = useRef(null);
+  const [puedeIzq, setPuedeIzq] = useState(false);
+  const [puedeDer, setPuedeDer] = useState(false);
+
+  function actualizarFlechas() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setPuedeIzq(el.scrollLeft > 4);
+    setPuedeDer(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }
+
+  useEffect(() => {
+    actualizarFlechas();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', actualizarFlechas, { passive: true });
+    window.addEventListener('resize', actualizarFlechas);
+    return () => {
+      el.removeEventListener('scroll', actualizarFlechas);
+      window.removeEventListener('resize', actualizarFlechas);
+    };
+  }, []);
+
+  function mover(direccion) {
+    scrollRef.current?.scrollBy({ left: direccion * 320, behavior: 'smooth' });
+  }
+
+  return (
+    <div className="fila-horizontal-wrap">
+      {puedeIzq && (
+        <button className="fila-flecha fila-flecha-izq" onClick={() => mover(-1)} aria-label="Ver anteriores">‹</button>
+      )}
+      <div className="fila-horizontal" ref={scrollRef}>
+        {children}
+      </div>
+      {puedeDer && (
+        <button className="fila-flecha fila-flecha-der" onClick={() => mover(1)} aria-label="Ver siguientes">›</button>
+      )}
+    </div>
+  );
+}
+
 // ── Skeleton con forma de "bollo de masa" (blob orgánico) en vez de rectángulos grises genéricos,
 // para que la carga se sienta parte de la marca en vez de un placeholder cualquiera ──
 function TarjetaSkeleton() {
@@ -299,11 +344,6 @@ export default function MenuPage() {
     }
     if (mets) setMetodos(mets);
     setCargando(false);
-  }
-
-  function scrollFila(e, direccion) {
-    const cont = e.currentTarget.parentElement.querySelector('.fila-horizontal');
-    if (cont) cont.scrollBy({ left: direccion * 320, behavior: 'smooth' });
   }
 
   function seleccionarCategoria(catId) {
@@ -650,15 +690,11 @@ export default function MenuPage() {
                   {categoriaActiva === '__todo__' && <span className="seccion-count">{promociones.length} producto{promociones.length !== 1 ? 's' : ''}</span>}
                 </h2>
                 {categoriaActiva === '__todo__' ? (
-                  <div className="fila-horizontal-wrap">
-                    <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
-                    <div className="fila-horizontal">
-                      {promociones.map(pr => (
-                        <div key={pr.id} className="card-h-wrap"><TarjetaPromo promo={pr} /></div>
-                      ))}
-                    </div>
-                    <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
-                  </div>
+                  <FilaHorizontal>
+                    {promociones.map(pr => (
+                      <div key={pr.id} className="card-h-wrap"><TarjetaPromo promo={pr} /></div>
+                    ))}
+                  </FilaHorizontal>
                 ) : (
                   <div className="grilla grilla-lista">
                     {promociones.map(pr => <TarjetaPromo key={pr.id} promo={pr} />)}
@@ -681,15 +717,11 @@ export default function MenuPage() {
                       {categoriaActiva === '__todo__' && <span className="seccion-count">{prods.length} producto{prods.length !== 1 ? 's' : ''}</span>}
                     </h2>
                     {categoriaActiva === '__todo__' ? (
-                      <div className="fila-horizontal-wrap">
-                        <button className="fila-flecha fila-flecha-izq" onClick={e => scrollFila(e, -1)} aria-label="Ver anteriores">‹</button>
-                        <div className="fila-horizontal">
-                          {prods.map(p => (
-                            <div key={p.id} className="card-h-wrap"><TarjetaProducto prod={p} /></div>
-                          ))}
-                        </div>
-                        <button className="fila-flecha fila-flecha-der" onClick={e => scrollFila(e, 1)} aria-label="Ver siguientes">›</button>
-                      </div>
+                      <FilaHorizontal>
+                        {prods.map(p => (
+                          <div key={p.id} className="card-h-wrap"><TarjetaProducto prod={p} /></div>
+                        ))}
+                      </FilaHorizontal>
                     ) : (
                       <div className="grilla grilla-lista">
                         {prods.map(p => <TarjetaProducto key={p.id} prod={p} />)}
