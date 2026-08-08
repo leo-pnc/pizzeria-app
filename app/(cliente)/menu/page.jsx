@@ -548,7 +548,6 @@ export default function MenuPage() {
             Amasando la página
             <span className="marca-splash-puntos"><span>.</span><span>.</span><span>.</span></span>
           </p>
-          <PlatosRebotando reduceMotion={reduceMotion} />
         </div>
       )}
 
@@ -705,6 +704,7 @@ export default function MenuPage() {
               productos.filter(p => p.categoria_id === categoriaActiva).length === 0 && (
                 <div className="seccion-vacia">
                   <p>No hay productos cargados en esta categoría todavía.</p>
+                  <PlatosRebotando reduceMotion={reduceMotion} />
                 </div>
             )}
           </div>
@@ -780,6 +780,10 @@ export default function MenuPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="footer-platos">
+          <PlatosRebotando variante="oscura" reduceMotion={reduceMotion} />
         </div>
 
         <div className="footer-bottom">
@@ -1068,6 +1072,12 @@ export default function MenuPage() {
         @keyframes plato-rebote { 0% { opacity: 0; transform: translateY(-16px) scale(0.6); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes sombra-rebote { 0% { opacity: 0; transform: scaleX(0.3); } 60% { opacity: 0.4; } 100% { opacity: 1; transform: scaleX(1); } }
         .splash-plato-label { font-size: 10.5px; color: #b0a898; font-weight: 600; letter-spacing: 0.02em; }
+
+        /* ── Variante oscura: misma animación, ajustada para el fondo negro del footer (la sombra y el label
+           necesitan contraste distinto que sobre fondo claro) ── */
+        .footer-platos { padding: 26px 16px; display: flex; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .splash-platos-oscura .splash-plato-sombra { background: rgba(255,255,255,0.14); }
+        .splash-platos-oscura .splash-plato-label { color: #8a8378; }
 
         /* ── ELEMENTO GRÁFICO PROPIO: la llama se repite en los puntos donde se habla de cocina/horno
            (pantalla de carga, confirmación de pedido) ── vuelve reconocible a la marca ── */
